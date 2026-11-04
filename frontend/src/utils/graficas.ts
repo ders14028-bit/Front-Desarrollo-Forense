@@ -1,24 +1,9 @@
-import { NOMBRES_LEGIBLES } from "../config";
 import type { Severidad } from "../types/alerta";
 import type { ConteoPorDia, ConteoPorOrigen, ConteoPorSeveridad, ConteoPorTipo } from "../types/metricas";
 import { diaBogota, diaCorto, etiquetaDia } from "./fechas";
+import { etiquetaSeveridad, nombreLegible } from "./etiquetas";
 
 /** Transformaciones puras que preparan los datos del resumen para las gráficas. */
-
-// ---------- Nombres ----------
-
-const SIGLAS = new Set(["misp", "ioc", "dns", "vpn", "siem"]);
-
-/** "fuerza-bruta" → "Fuerza bruta"; "inteligencia-misp" → "Inteligencia MISP"; "wazuh" → "Wazuh". */
-export function nombreLegible(clave: string): string {
-  const conocido = NOMBRES_LEGIBLES[clave];
-  if (conocido) return conocido;
-
-  const palabras = clave.split(/[-_\s]+/).filter(Boolean);
-  if (palabras.length === 0) return clave;
-  const texto = palabras.map((p) => (SIGLAS.has(p.toLowerCase()) ? p.toUpperCase() : p.toLowerCase())).join(" ");
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
-}
 
 // ---------- Escala ----------
 
@@ -36,8 +21,6 @@ export interface Fila {
   cantidad: number;
 }
 
-const NOMBRE_SEVERIDAD: Record<Severidad, string> = { 4: "Crítica", 3: "Alta", 2: "Media", 1: "Baja" };
-
 export interface FilaSeveridad extends Fila {
   severidad: Severidad;
 }
@@ -47,7 +30,7 @@ export function filasSeveridad(porSeveridad: ConteoPorSeveridad[]): FilaSeverida
   return ([4, 3, 2, 1] as Severidad[]).map((severidad) => ({
     severidad,
     clave: String(severidad),
-    etiqueta: NOMBRE_SEVERIDAD[severidad],
+    etiqueta: etiquetaSeveridad(severidad),
     cantidad: porSeveridad.find((s) => s.severidad === severidad)?.cantidad ?? 0,
   }));
 }

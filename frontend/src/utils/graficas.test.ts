@@ -6,35 +6,11 @@ import {
   armarTipos,
   filasOrigen,
   filasSeveridad,
-  nombreLegible,
   serieVisible,
 } from "./graficas";
 
 // 3 nov 2026, 10:00 en Bogotá. Datos armados a mano.
 const AHORA = Date.UTC(2026, 10, 3, 15, 0);
-
-describe("nombreLegible", () => {
-  it("escenarios conocidos", () => {
-    expect(nombreLegible("fuerza-bruta")).toBe("Fuerza bruta");
-    expect(nombreLegible("inteligencia-misp")).toBe("Inteligencia MISP");
-    expect(nombreLegible("correlacion")).toBe("Correlación");
-    expect(nombreLegible("phishing")).toBe("Phishing");
-  });
-
-  it("herramientas y valores desconocidos", () => {
-    expect(nombreLegible("auditd")).toBe("AuditD");
-    expect(nombreLegible("wazuh")).toBe("Wazuh");
-    expect(nombreLegible("correo")).toBe("Correo");
-    expect(nombreLegible("misp")).toBe("MISP");
-    expect(nombreLegible("nuevo-tipo_raro")).toBe("Nuevo tipo raro");
-    expect(nombreLegible("ioc-feed")).toBe("IOC feed");
-  });
-
-  it("texto vacío no revienta", () => {
-    expect(nombreLegible("")).toBe("");
-    expect(nombreLegible("--")).toBe("--");
-  });
-});
 
 describe("anchoRelativo", () => {
   it("la barra más larga ocupa el 100 %", () => {
