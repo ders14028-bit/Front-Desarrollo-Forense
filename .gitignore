@@ -1,1 +1,9 @@
 .idea/
+
+# Secretos y configuración local (aplica a frontend/, backend/ y lo que venga)
+.env
+*.env
+.env.*
+!.env.example
+*.pem
+*.crt

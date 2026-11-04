@@ -3,23 +3,25 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { crearFuenteMock } from "../../api/mock";
 import type { ListaAlertas } from "../../types/listaAlertas";
+import { conFiltros, conOrden, conPagina, ESTADO_TABLA_INICIAL, FILTROS_VACIOS, type EstadoTabla } from "../../utils/tabla";
 import { ListadoAlertas } from "./ListadoAlertas";
 
 // Renderizado en servidor (sin navegador): comprueba el HTML de la primera página.
 
 const AHORA = Date.UTC(2026, 10, 3, 15, 0);
 const contar = (html: string, texto: string) => html.split(texto).length - 1;
-const html = (lista: ListaAlertas) => renderToStaticMarkup(createElement(ListadoAlertas, { lista }));
+const html = (lista: ListaAlertas, tabla: EstadoTabla = ESTADO_TABLA_INICIAL) =>
+  renderToStaticMarkup(createElement(ListadoAlertas, { lista, tabla, dispatch: () => {} }));
 
 async function listaMock(): Promise<ListaAlertas> {
   return crearFuenteMock({ ahora: () => AHORA, demoraMs: 0, falla: false }).listarAlertas();
 }
 
 describe("ListadoAlertas: con las 40 alertas del mock", () => {
-  it("cabecera: 'N alertas · últimos 30 días' y nota de laboratorio", async () => {
+  it("cabecera: 'N alertas · últimos 30 días'; el aviso de laboratorio ya no va en la lista (es uno general, en App)", async () => {
     const h = html(await listaMock());
     expect(h).toContain("40 alertas · últimos 30 días");
-    expect(h).toContain("Datos de laboratorio");
+    expect(h).not.toContain("Datos de laboratorio");
     expect(h).not.toContain("Mostrando las"); // no está truncada
   });
 
@@ -94,6 +96,40 @@ describe("ListadoAlertas: barra de filtros (primer render)", () => {
   });
 });
 
+describe("ListadoAlertas: se dibuja desde el estado que viene de App (así se conserva al cambiar de pestaña)", () => {
+  it("con filtros y la página 2 ya aplicados, al montarse muestra exactamente eso", async () => {
+    const lista = await listaMock();
+    let tabla = conFiltros(ESTADO_TABLA_INICIAL, { ...FILTROS_VACIOS, estados: ["New"] }); // 26 sin atender
+    tabla = conPagina(conOrden(tabla, "recientes"), 2);
+
+    const h = html(lista, tabla);
+    expect(h).toContain("26 de 40 alertas · últimos 30 días");
+    expect(h).toContain("Mostrando 26 de 26");
+    expect(h).toContain("Página 2 de 2");
+    expect(h).toContain("Anterior");
+    expect(h).not.toContain("Siguiente");
+    expect(h).toContain("Estado: Sin atender"); // chip del filtro
+    expect(h).toContain("Limpiar filtros");
+    expect(h).toMatch(/<option value="recientes" selected="">Más recientes<\/option>/); // el orden elegido
+    expect(contar(h, 'class="fila-alerta"')).toBe(1); // la única fila de la página 2
+  });
+
+  it("la búsqueda guardada reaparece en el cuadro de texto y como chip", async () => {
+    const lista = await listaMock();
+    const tabla = conFiltros(ESTADO_TABLA_INICIAL, { ...FILTROS_VACIOS, busqueda: "phishing" });
+    const h = html(lista, tabla);
+    expect(h).toContain('value="phishing"');
+    expect(h).toContain("Título: “phishing”");
+  });
+
+  it("una página guardada que ya no existe se muestra como la última que sí existe", async () => {
+    const lista = await listaMock();
+    const h = html(lista, conPagina(ESTADO_TABLA_INICIAL, 9)); // solo hay 2 páginas
+    expect(h).toContain("Página 2 de 2");
+    expect(h).toContain("Mostrando 26–40 de 40");
+  });
+});
+
 describe("ListadoAlertas: casos especiales", () => {
   const base: ListaAlertas = { generadoEn: AHORA, total: 0, truncado: false, datosDeLaboratorio: false, alertas: [] };
 
@@ -103,7 +139,6 @@ describe("ListadoAlertas: casos especiales", () => {
     expect(h).toContain("0 alertas · últimos 30 días");
     expect(h).not.toContain("<table");
     expect(h).not.toContain("Mostrando");
-    expect(h).not.toContain("Datos de laboratorio");
   });
 
   it("si está truncada, avisa cuántas muestra", async () => {

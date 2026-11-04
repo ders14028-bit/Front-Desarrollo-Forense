@@ -1,30 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch } from "react";
 import { VENTANA_ALERTAS_DIAS } from "../../config";
 import type { ListaAlertas } from "../../types/listaAlertas";
 import { calcularOpciones } from "../../utils/filtros";
-import {
-  calcularVista,
-  conFiltros,
-  conOrden,
-  conPagina,
-  ESTADO_TABLA_INICIAL,
-  FILTROS_VACIOS,
-  hayFiltrosActivos,
-  textoResumenLista,
-  type EstadoTabla,
-  type FiltrosTabla,
-  type Orden,
-} from "../../utils/tabla";
-import { NotaLaboratorio } from "../ui/NotaLaboratorio";
+import { calcularVista, hayFiltrosActivos, textoResumenLista, type EstadoTabla, type FiltrosTabla, type Orden } from "../../utils/tabla";
+import type { AccionApp } from "../../estadoApp";
 import { PanelDetalle } from "./detalle/PanelDetalle";
 import { BarraFiltros } from "./filtros/BarraFiltros";
 import { Paginacion } from "./Paginacion";
 import { TablaAlertas } from "./TablaAlertas";
 import { TarjetasAlertas } from "./TarjetasAlertas";
 
+interface Props {
+  lista: ListaAlertas;
+  /** Estado de la tabla (filtros, búsqueda, orden y página). Vive en App: se conserva al cambiar de pestaña. */
+  tabla: EstadoTabla;
+  dispatch: Dispatch<AccionApp>;
+}
+
 /** Cabecera, filtros, tabla (escritorio) o tarjetas (celular), paginación, estados vacíos y panel de detalle. */
-export function ListadoAlertas({ lista }: { lista: ListaAlertas }) {
-  const [estado, setEstado] = useState<EstadoTabla>(ESTADO_TABLA_INICIAL);
+export function ListadoAlertas({ lista, tabla: estado, dispatch }: Props) {
   const [limpiezas, setLimpiezas] = useState(0);
   const [abierta, setAbierta] = useState<string | null>(null);
   const raiz = useRef<HTMLElement>(null);
@@ -39,26 +33,24 @@ export function ListadoAlertas({ lista }: { lista: ListaAlertas }) {
   // Si tras un refresco la lista se achicó y la página pedida ya no existe, `calcularVista` ya muestra
   // la última que existe; aquí el estado se alinea para no "saltar" de vuelta si la lista vuelve a crecer.
   useEffect(() => {
-    if (pagina.pagina !== estado.pagina) setEstado((e) => conPagina(e, pagina.pagina));
-  }, [pagina.pagina, estado.pagina]);
+    if (pagina.pagina !== estado.pagina) dispatch({ tipo: "pagina", pagina: pagina.pagina });
+  }, [pagina.pagina, estado.pagina, dispatch]);
 
   const irAPagina = (numero: number) => {
-    setEstado((e) => conPagina(e, numero));
+    dispatch({ tipo: "pagina", pagina: numero });
     raiz.current?.scrollIntoView({ block: "start" });
   };
 
-  // Cambiar un filtro vuelve a la página 1. Si la función devuelve el mismo objeto, no hay cambio.
-  const cambiarFiltros = useCallback((cambio: (actuales: FiltrosTabla) => FiltrosTabla) => {
-    setEstado((e) => {
-      const nuevos = cambio(e.filtros);
-      return nuevos === e.filtros ? e : conFiltros(e, nuevos);
-    });
-  }, []);
-  const cambiarOrden = useCallback((orden: Orden) => setEstado((e) => (e.orden === orden ? e : conOrden(e, orden))), []);
+  // Cambiar un filtro o el orden vuelve a la página 1 (lo resuelve el reductor de App).
+  const cambiarFiltros = useCallback(
+    (cambio: (actuales: FiltrosTabla) => FiltrosTabla) => dispatch({ tipo: "filtros", cambio }),
+    [dispatch],
+  );
+  const cambiarOrden = useCallback((orden: Orden) => dispatch({ tipo: "orden", orden }), [dispatch]);
   const limpiarFiltros = useCallback(() => {
-    setEstado((e) => conFiltros(e, FILTROS_VACIOS));
+    dispatch({ tipo: "limpiar-filtros" });
     setLimpiezas((n) => n + 1);
-  }, []);
+  }, [dispatch]);
 
   // --- Panel de detalle ---
   const abrir = (id: string) => {
@@ -93,11 +85,6 @@ export function ListadoAlertas({ lista }: { lista: ListaAlertas }) {
         </p>
       </div>
 
-      {lista.datosDeLaboratorio && (
-        <div className="lista-nota">
-          <NotaLaboratorio />
-        </div>
-      )}
       {lista.truncado && (
         <p className="lista-aviso" role="status">
           Mostrando las {lista.alertas.length} más recientes

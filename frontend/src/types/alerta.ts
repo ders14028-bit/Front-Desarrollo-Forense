@@ -3,7 +3,10 @@ export type Severidad = 1 | 2 | 3 | 4;
 
 export type EtiquetaSeveridad = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
-/** `New` = sin atender. */
+/**
+ * `New` = sin atender (regla de CLAUDE.md). PENDIENTE: confirmar con el grupo de TheHive los demás valores
+ * (`InProgress`, `Imported`, `Ignored`) y que `Imported` es la alerta ya convertida en caso.
+ */
 export type EstadoAlerta = "New" | "InProgress" | "Imported" | "Ignored";
 
 /**
@@ -35,6 +38,7 @@ export interface Alerta {
   stage: EstadoAlerta;
   extraData: Record<string, unknown>;
   newDate: number;
+  /** PENDIENTE: confirmar la unidad (segundos, minutos…) con datos reales de TheHive. */
   timeToDetect: number;
   /** Solo presente si la alerta ya se convirtió en caso. */
   caseId?: string;

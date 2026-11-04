@@ -16,7 +16,10 @@ export const ESTADO_CONFIRMADO = "TruePositive";
 /** Estado de un caso cerrado como falso positivo (cuenta como cerrado, no como confirmado). */
 export const ESTADO_FALSO_POSITIVO = "FalsePositive";
 
-/** Tag que marca los datos de prueba; si hay alertas o casos con él, se muestra "Datos de laboratorio". */
+/**
+ * Tag que marca los datos de prueba; si hay alertas o casos con él, se muestra el aviso "Datos de laboratorio".
+ * PENDIENTE: confirmar que las alertas y casos de prueba de TheHive llevan este tag.
+ */
 export const TAG_LABORATORIO = "simulacion";
 
 /**
@@ -40,11 +43,13 @@ export const VENTANA_ALERTAS_DIAS = 30;
 export const TOPE_ALERTAS = 1000;
 
 /**
- * Enlaces "Abrir en TheHive". Solo se usan para abrir la página en otra pestaña: el frontend
- * nunca llama a TheHive. PENDIENTE: confirmar el formato exacto de las rutas (¿`/alerts/<id>/details`
+ * Enlaces "Abrir en TheHive". La URL base sale de la variable de entorno VITE_THEHIVE_URL (no se escribe en el
+ * código); si no está definida, no se muestran los enlaces. Solo sirven para abrir la página en otra pestaña: el
+ * frontend nunca llama a TheHive. PENDIENTE: confirmar el formato exacto de las rutas (¿`/alerts/<id>/details`
  * y `/cases/<id>/details`? ¿con `~` en el id?) con el grupo de TheHive.
  */
-export const THEHIVE_URL_BASE = "https://srvlinuxqa.tail2ab6e9.ts.net:8445";
+const urlTheHive = (import.meta.env.VITE_THEHIVE_URL ?? "").trim();
+export const THEHIVE_URL_BASE: string | null = urlTheHive === "" ? null : urlTheHive;
 export const THEHIVE_RUTA_ALERTA = (id: string) => `/alerts/${id}/details`;
 export const THEHIVE_RUTA_CASO = (id: string) => `/cases/${id}/details`;
 

@@ -45,7 +45,7 @@ Datos ya agregados para la Vista gerencial.
 ```ts
 interface ResumenGerencial {
   generadoEn: number;            // instante en que se calculó
-  datosDeLaboratorio: boolean;   // true si hay alertas o casos con el tag "simulacion"
+  datosDeLaboratorio: boolean;   // true si hay alertas o casos con el tag "simulacion" (el frontend muestra UN aviso general)
   alertas: ResumenAlertas;
   casos: ResumenCasos;
 }
@@ -242,10 +242,60 @@ interface Tarea {
 
 ---
 
+## Cambios previstos para el backend (aún no implementados en el frontend)
+
+Estos dos puntos están decididos y el backend debería contemplarlos cuando se construya. El frontend los
+adoptará después; hoy funciona con lo descrito arriba.
+
+### A. El backend expone su configuración de SLA y el frontend la usa en vez de la suya
+
+El SLA (minutos: crítica 15, alta 30, media 120, baja 240) vive hoy en `frontend/src/config/index.ts` (para
+el mock) y vivirá también en el backend (para calcular `fueraDeSla` y `sla` de cada alerta). Para que haya una
+sola fuente de verdad:
+
+```
+GET /api/dashboard/configuracion
+→ { "slaMinutos": { "1": 240, "2": 120, "3": 30, "4": 15 } }     // clave = severidad
+```
+
+- El frontend leerá este endpoint y dejará `SLA_MINUTOS` solo para el mock.
+- Las filas de la lista y el detalle ya traen `sla.limiteMin` calculado por el backend; este endpoint cubre
+  los demás lugares donde el frontend necesite el valor.
+
+### B. El resumen indica si TheHive respondió; el encabezado distingue dos fallos
+
+El backend no puede decir "TheHive conectado" solo porque él mismo responde. Se añade al resumen (y, de
+preferencia, a la lista de alertas):
+
+```ts
+interface EstadoTheHive {
+  /** true si la última consulta del backend a TheHive terminó bien. */
+  respondio: boolean;
+  /** Instante (ms) de esa última consulta. */
+  consultadoEn: number;
+}
+// ResumenGerencial.thehive: EstadoTheHive     ListaAlertas.thehive: EstadoTheHive
+```
+
+- Si TheHive no responde, el backend responde igualmente `200` con los últimos datos que tenga y
+  `thehive.respondio = false` (por acordar: alternativa, `502` sin datos).
+- Encabezado del frontend, en este orden de prioridad:
+  1. el backend no responde (red, timeout o error HTTP) → **"Sin conexión con el servidor"** (rojo);
+  2. el backend responde pero `thehive.respondio = false` → **"TheHive no responde"** (rojo);
+  3. modo mock → "Datos simulados"; 4. todo bien → "TheHive conectado".
+
+---
+
 ## Pendientes de confirmar
 
 - Nombres `Contención` (grupo de tareas) y `TruePositive` (estado de caso confirmado) con el grupo de TheHive.
-- Forma real de casos y tareas (hoy hay 0 casos en TheHive).
+- Forma real de casos y tareas (hoy hay 0 casos en TheHive): valores de `stage` de casos (¿un caso cerrado es
+  `Closed`?) y de `status` de tareas (`Waiting`, `InProgress`, `Completed`, `Cancel`).
+- Estados de alerta distintos de `New`: `InProgress`, `Imported` (¿es siempre "convertida en caso"?) e `Ignored`.
+- Resoluciones de caso distintas de `TruePositive`/`FalsePositive`: `Other`, `Indeterminate`, `Duplicated`.
+- Unidad de `timeToDetect` (segundos, minutos…).
 - Si TheHive guarda la fecha exacta en que una alerta se convirtió en caso. Mientras no, la línea de
   tiempo del frontend usa `_createdAt` del caso como fecha de la conversión.
-- Formato exacto de las rutas de los enlaces "Abrir en TheHive" (`frontend/src/config/index.ts`).
+- Que las alertas y casos de prueba lleven el tag `simulacion` (de él depende `datosDeLaboratorio`).
+- Formato exacto de las rutas de los enlaces "Abrir en TheHive" (`frontend/src/config/index.ts`). La URL base
+  no está en el código: sale de `VITE_THEHIVE_URL` y, sin ella, el frontend no muestra los enlaces.

@@ -258,14 +258,6 @@ body {
   overflow-wrap: anywhere;
 }
 
-.nota-laboratorio {
-  margin: auto 0 0;
-  padding-top: var(--espacio-1);
-  font-size: 0.6875rem;
-  font-style: italic;
-  color: var(--texto-suave);
-}
-
 /* ---------- Gráficas ---------- */
 .rejilla-graficas {
   display: grid;
@@ -393,7 +385,7 @@ body {
 .selector {
   display: inline-flex;
   overflow: hidden;
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-control);
   border-radius: var(--radio);
 }
 
@@ -408,7 +400,7 @@ body {
 }
 
 .selector__opcion + .selector__opcion {
-  border-left: 1px solid var(--borde);
+  border-left: 1px solid var(--borde-control);
 }
 
 .selector__opcion[aria-pressed="true"] {
@@ -564,7 +556,7 @@ body {
 .boton--secundario {
   color: var(--texto);
   background: transparent;
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-control);
 }
 
 .marcador {
@@ -613,10 +605,6 @@ body {
 .lista-cabecera__resumen {
   margin: 0;
   color: var(--texto-suave);
-}
-
-.lista-nota {
-  margin: calc(var(--espacio-2) * -1) 0 var(--espacio-3);
 }
 
 .lista-aviso {
@@ -827,8 +815,10 @@ body {
 
 .paginacion__botones {
   display: flex;
+  flex-wrap: wrap; /* con muchas páginas ("Página 10 de 12") los botones bajan de línea en vez de desbordar */
   align-items: center;
-  gap: var(--espacio-3);
+  justify-content: center;
+  gap: var(--espacio-2) var(--espacio-3);
 }
 
 .paginacion__pagina {
@@ -839,6 +829,16 @@ body {
 .paginacion__hueco {
   display: inline-block;
   min-width: 6.5rem; /* mantiene el centro en su sitio cuando falta Anterior o Siguiente */
+}
+
+@media (max-width: 719.98px) {
+  .paginacion__botones {
+    width: 100%;
+  }
+
+  .paginacion__hueco {
+    display: none; /* en celular el hueco ocuparía una fila entera si los botones bajan de línea */
+  }
 }
 
 /* Esqueleto de la lista */
@@ -887,7 +887,7 @@ body {
   font: inherit;
   color: var(--texto);
   background: var(--superficie);
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-control);
   border-radius: var(--radio);
 }
 
@@ -1048,7 +1048,7 @@ body {
   padding: 6px 12px;
   font-size: 0.875rem;
   background: var(--superficie);
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-control);
   border-radius: 999px;
 }
 
@@ -1182,6 +1182,7 @@ body {
 
 .dialogo__barra {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--espacio-2);
@@ -1196,7 +1197,7 @@ body {
   font-size: 0.875rem;
   color: var(--texto);
   background: transparent;
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-control);
   border-radius: var(--radio);
   cursor: pointer;
 }
@@ -1307,8 +1308,14 @@ body {
     display: none;
   }
 
+  /* "Anterior · 3 de 25 · Siguiente" baja a su propia fila para no desbordar a 360 px */
+  .dialogo__nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+
   .dialogo__hueco {
-    min-width: 0;
+    display: none;
   }
 }
 
@@ -1521,4 +1528,91 @@ body {
 .linea-tiempo__fecha {
   color: var(--texto-suave);
   font-size: 0.8125rem;
+}
+
+/* ---------- Accesibilidad de la estructura ---------- */
+.saltar {
+  position: absolute;
+  top: -100px;
+  left: var(--espacio-2);
+  z-index: 300;
+  padding: var(--espacio-2) var(--espacio-4);
+  color: var(--acento-texto);
+  background: var(--acento);
+  border-radius: var(--radio);
+}
+
+.saltar:focus {
+  top: var(--espacio-2);
+}
+
+/* El panel de la pestaña es enfocable (para leerlo con el teclado); el anillo solo aparece con teclado. */
+[role="tabpanel"]:focus {
+  outline: none;
+}
+
+[role="tabpanel"]:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+/* ---------- Aviso de datos de laboratorio (debajo del encabezado, en las dos vistas) ---------- */
+.aviso-laboratorio {
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.aviso-laboratorio__texto {
+  margin: 0;
+  padding-block: var(--espacio-2);
+  font-size: 0.875rem;
+  color: var(--texto);
+}
+
+.aviso-laboratorio__etiqueta {
+  padding: 1px 8px;
+  margin-right: var(--espacio-2);
+  font-weight: 600;
+  color: var(--aviso);
+  border: 1px solid var(--aviso);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Valor con un complemento más pequeño al lado, por ejemplo "1 de 40 (2,5 %)" */
+.tarjeta__sufijo {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
+/* "6 de 40" no se parte; "(15 %)" baja de línea si no cabe */
+.tarjeta__cifra {
+  white-space: nowrap;
+}
+
+/* Número de página: "Página 10 de 12" en pantallas anchas, "10/12" en angostas (el texto largo sigue disponible para lectores de pantalla) */
+.paginacion__pagina {
+  position: relative;
+}
+
+.paginacion__pagina-corta {
+  display: none;
+}
+
+@media (max-width: 479.98px) {
+  .paginacion__pagina-larga {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .paginacion__pagina-corta {
+    display: inline;
+  }
 }

@@ -1,6 +1,5 @@
 import { GraficaEsqueleto } from "../components/graficas/TarjetaGrafica";
 import { BloqueCarga } from "../components/ui/BloqueCarga";
-import { NotaLaboratorio } from "../components/ui/NotaLaboratorio";
 import { TarjetaEsqueleto, TarjetaMetrica } from "../components/ui/TarjetaMetrica";
 import type { ResultadoResumen } from "../hooks/useResumen";
 import type { ResumenGerencial } from "../types/metricas";
@@ -10,9 +9,8 @@ import { SeccionGraficas } from "./SeccionGraficas";
 const porcentaje = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 });
 const plural = (n: number, singular: string, plural: string) => `${n} ${n === 1 ? singular : plural}`;
 
-function SeccionAlertas({ resumen }: { resumen: ResumenGerencial }) {
+export function SeccionAlertas({ resumen }: { resumen: ResumenGerencial }) {
   const a = resumen.alertas;
-  const nota = resumen.datosDeLaboratorio ? <NotaLaboratorio /> : undefined;
 
   return (
     <section className="seccion" aria-labelledby="titulo-alertas">
@@ -30,12 +28,15 @@ function SeccionAlertas({ resumen }: { resumen: ResumenGerencial }) {
           valor={a.sinAtender}
           detalle={a.sinAtender === 0 ? "No hay alertas sin atender" : undefined}
         />
-        <TarjetaMetrica titulo="Críticas y altas" valor={a.criticasYAltas} />
+        <TarjetaMetrica
+          titulo="Críticas y altas"
+          valor={a.criticasYAltas}
+          detalle={a.criticasYAltas === 0 ? "No hay alertas críticas ni altas" : undefined}
+        />
         <TarjetaMetrica
           titulo="Fuera de SLA"
           valor={a.fueraDeSla}
           detalle={a.fueraDeSla === 0 ? "Ninguna fuera de plazo" : undefined}
-          nota={nota}
         />
         <TarjetaMetrica
           titulo="Sin atender más antigua"
@@ -46,14 +47,13 @@ function SeccionAlertas({ resumen }: { resumen: ResumenGerencial }) {
               : `Promedio: ${formatoAntiguedad(a.antiguedadPromedioSinAtenderMs)}`
           }
           vacio="No hay alertas sin atender"
-          nota={nota}
         />
       </div>
     </section>
   );
 }
 
-function SeccionCasos({ resumen }: { resumen: ResumenGerencial }) {
+export function SeccionCasos({ resumen }: { resumen: ResumenGerencial }) {
   const c = resumen.casos;
   const conv = c.alertasConvertidas;
 
@@ -75,7 +75,7 @@ function SeccionCasos({ resumen }: { resumen: ResumenGerencial }) {
         <TarjetaMetrica
           titulo="Alertas convertidas en caso"
           valor={conv.porcentaje === null ? null : `${conv.convertidas} de ${conv.total}`}
-          detalle={conv.porcentaje === null ? undefined : `${porcentaje.format(conv.porcentaje)} %`}
+          sufijo={conv.porcentaje === null ? undefined : `(${porcentaje.format(conv.porcentaje)} %)`}
           vacio="Aún no hay alertas"
         />
         <TarjetaMetrica

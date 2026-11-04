@@ -44,6 +44,10 @@ export function PanelDetalle({ id, filas, onCambiarAlerta, onCerrar }: Props) {
   if (enLista) ultimaFila.current = filas[indice];
   const fila = enLista ? filas[indice] : ultimaFila.current;
 
+  // Sin VITE_THEHIVE_URL no hay enlaces.
+  const urlAlerta = fila ? urlAlertaTheHive(fila.id) : null;
+  const urlCaso = fila?.caso ? urlCasoTheHive(fila.caso.id) : null;
+
   const anterior = enLista && indice > 0 ? filas[indice - 1] : null;
   const siguiente = enLista && indice < filas.length - 1 ? filas[indice + 1] : null;
 
@@ -120,12 +124,12 @@ export function PanelDetalle({ id, filas, onCambiarAlerta, onCerrar }: Props) {
               <p className="dialogo__meta">
                 ID {fila.id} · {etiquetaOrigen(fila.origen)}
               </p>
-              <p className="dialogo__enlaces">
-                <EnlaceTheHive href={urlAlertaTheHive(fila.id)}>Abrir alerta en TheHive</EnlaceTheHive>
-                {fila.caso !== null && (
-                  <EnlaceTheHive href={urlCasoTheHive(fila.caso.id)}>Abrir caso en TheHive</EnlaceTheHive>
-                )}
-              </p>
+              {(urlAlerta !== null || urlCaso !== null) && (
+                <p className="dialogo__enlaces">
+                  {urlAlerta !== null && <EnlaceTheHive href={urlAlerta}>Abrir alerta en TheHive</EnlaceTheHive>}
+                  {urlCaso !== null && <EnlaceTheHive href={urlCaso}>Abrir caso en TheHive</EnlaceTheHive>}
+                </p>
+              )}
             </>
           )}
           {enLista && (

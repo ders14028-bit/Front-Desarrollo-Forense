@@ -4,7 +4,10 @@ import type { Severidad } from "./alerta";
 // TheHive todavía tiene 0 casos; estos campos salen de la API v1 de TheHive 5/6 que
 // conocemos, no de una respuesta real. Verificar nombres, tipos y valores de `status`/`stage`.
 
-/** Etapa del caso. En TheHive 5/6 un caso cerrado tiene `stage = "Closed"`. */
+/**
+ * Etapa del caso. En TheHive 5/6 un caso cerrado tiene `stage = "Closed"`.
+ * PENDIENTE: confirmar con un caso real que esos son los valores de `stage` y que "cerrado" es `Closed`.
+ */
 export type EtapaCaso = "New" | "InProgress" | "Closed";
 
 export interface Caso {

@@ -2,6 +2,7 @@
 // TheHive todavía tiene 0 casos y por tanto 0 tareas; estos campos salen de la API v1 de
 // TheHive 5/6 que conocemos. Verificar nombres y valores de `status` y `group`.
 
+/** PENDIENTE: confirmar con tareas reales que estos son los valores de `status` (y que `Completed` es "hecha"). */
 export type EstadoTarea = "Waiting" | "InProgress" | "Completed" | "Cancel";
 
 export interface Tarea {

@@ -26,8 +26,14 @@ export function Paginacion({ pagina: p, onCambiar }: Props) {
             <span className="paginacion__hueco" aria-hidden="true" />
           )}
 
+          {/* En pantallas angostas se muestra "10/12"; los lectores de pantalla siguen leyendo "Página 10 de 12". */}
           <span className="paginacion__pagina">
-            Página {p.pagina} de {p.totalPaginas}
+            <span className="paginacion__pagina-larga">
+              Página {p.pagina} de {p.totalPaginas}
+            </span>
+            <span className="paginacion__pagina-corta" aria-hidden="true">
+              {p.pagina}/{p.totalPaginas}
+            </span>
           </span>
 
           {p.pagina < p.totalPaginas ? (

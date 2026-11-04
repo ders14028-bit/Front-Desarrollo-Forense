@@ -5,7 +5,8 @@
 
   --fondo: #f5f6f8;
   --superficie: #ffffff;
-  --borde: #d9dde3;
+  --borde: #d9dde3; /* líneas decorativas (tarjetas, tablas) */
+  --borde-control: #7d8594; /* borde de campos y botones: >= 3:1 contra la superficie y el fondo (WCAG 1.4.11) */
   --texto: #1b1f27;
   --texto-suave: #5a6270;
   --acento: #1f5fbf;
@@ -38,6 +39,7 @@
     --fondo: #12151b;
     --superficie: #1b2029;
     --borde: #2f3643;
+    --borde-control: #6b7385;
     --texto: #e8ebf0;
     --texto-suave: #a2abb9;
     --acento: #6ea3ff;

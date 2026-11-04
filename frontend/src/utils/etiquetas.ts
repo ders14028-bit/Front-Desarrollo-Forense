@@ -88,6 +88,7 @@ export function etiquetaAntiguedad(ms: number): string {
 const ETAPA_CASO: Record<EtapaCaso, string> = { New: "Abierto", InProgress: "En progreso", Closed: "Cerrado" };
 
 // Resolución al cerrar el caso (`status`). Lo que no esté aquí se muestra tal cual.
+// PENDIENTE: confirmar con casos reales los valores `Other`, `Indeterminate` y `Duplicated` (salen de la API v1 de TheHive 5).
 const RESOLUCION: Record<string, string> = {
   [ESTADO_CONFIRMADO]: "Confirmado",
   [ESTADO_FALSO_POSITIVO]: "Falso positivo",

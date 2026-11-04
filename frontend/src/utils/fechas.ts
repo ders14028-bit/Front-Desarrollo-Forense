@@ -35,8 +35,8 @@ export function formatoFechaHora(ms: number): string {
   return `${diaCorto(dia)} ${dia.slice(0, 4)}, ${formatoHora(ms)}`;
 }
 
-/** Los `n` días (`YYYY-MM-DD`, del más antiguo al más reciente) que terminan hoy en Bogotá. */
-export function ultimosDias(n: number, ahora: number = Date.now()): string[] {
+/** Los `n` días (`YYYY-MM-DD`, del más antiguo al más reciente) que terminan hoy en Bogotá. `ahora` (ms) es el instante de referencia. */
+export function ultimosDias(n: number, ahora: number): string[] {
   const [a, m, d] = diaBogota(ahora).split("-").map(Number);
   // Aritmética de calendario puro en UTC: no depende de la zona del equipo.
   const hoyUtc = Date.UTC(a, m - 1, d);
@@ -54,7 +54,7 @@ export function diaCorto(dia: string): string {
 }
 
 /** "Hoy" para el día actual; "1 nov" el primer día del mes; si no, solo el número. */
-export function etiquetaDia(dia: string, ahora: number = Date.now()): string {
+export function etiquetaDia(dia: string, ahora: number): string {
   if (dia === diaBogota(ahora)) return "Hoy";
   const numero = Number(dia.split("-")[2]);
   return numero === 1 ? diaCorto(dia) : String(numero);
