@@ -1,6 +1,6 @@
-import type { Alerta } from "../types/alerta";
+import type { DetalleAlerta, ListaAlertas } from "../types/listaAlertas";
 import type { ResumenGerencial } from "../types/metricas";
-import { ErrorApi, type FiltrosAlertas, type FuenteDatos } from "./tipos";
+import { ErrorApi, type FuenteDatos } from "./tipos";
 
 interface OpcionesHttp {
   timeoutMs?: number;
@@ -9,13 +9,16 @@ interface OpcionesHttp {
 }
 
 const TIMEOUT_POR_DEFECTO_MS = 10_000;
+const FORMATO_INESPERADO = "La respuesta del servidor no tiene el formato esperado.";
 
-function mensajePorEstado(estado: number): string {
+function mensajePorEstado(estado: number, mensaje404: string): string {
   if (estado === 401 || estado === 403) return `El servidor rechazó la solicitud por falta de autorización (${estado}).`;
-  if (estado === 404) return "El servicio solicitado no existe en el servidor (404).";
+  if (estado === 404) return mensaje404;
   if (estado >= 500) return `El servidor tuvo un error interno (${estado}). Intenta de nuevo en unos minutos.`;
   return `El servidor respondió con un error inesperado (${estado}).`;
 }
+
+const esObjeto = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
 
 /**
  * Cliente del backend Spring Boot. Solo habla con el backend (nunca con TheHive) y no envía
@@ -26,15 +29,14 @@ export function crearFuenteHttp(baseUrl: string, opciones: OpcionesHttp = {}): F
   const timeoutMs = opciones.timeoutMs ?? TIMEOUT_POR_DEFECTO_MS;
   const fetchFn = opciones.fetchFn ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
-  async function pedir(ruta: string, parametros?: URLSearchParams): Promise<unknown> {
-    const consulta = parametros && parametros.size > 0 ? `?${parametros.toString()}` : "";
+  async function pedir(ruta: string, mensaje404 = "El servicio solicitado no existe en el servidor (404)."): Promise<unknown> {
     const controlador = new AbortController();
     const temporizador = setTimeout(() => controlador.abort(), timeoutMs);
 
     try {
       let respuesta: Response;
       try {
-        respuesta = await fetchFn(`${base}${ruta}${consulta}`, {
+        respuesta = await fetchFn(`${base}${ruta}`, {
           headers: { Accept: "application/json" },
           signal: controlador.signal,
         });
@@ -47,12 +49,12 @@ export function crearFuenteHttp(baseUrl: string, opciones: OpcionesHttp = {}): F
         throw new ErrorApi("No se pudo conectar con el servidor. Revisa tu conexión y que el backend esté en ejecución.");
       }
 
-      if (!respuesta.ok) throw new ErrorApi(mensajePorEstado(respuesta.status));
+      if (!respuesta.ok) throw new ErrorApi(mensajePorEstado(respuesta.status, mensaje404));
 
       try {
         return await respuesta.json();
       } catch {
-        throw new ErrorApi("La respuesta del servidor no tiene el formato esperado.");
+        throw new ErrorApi(FORMATO_INESPERADO);
       }
     } finally {
       clearTimeout(temporizador);
@@ -62,21 +64,20 @@ export function crearFuenteHttp(baseUrl: string, opciones: OpcionesHttp = {}): F
   return {
     async obtenerResumenGerencial() {
       const datos = await pedir("/api/dashboard/resumen");
-      const resumen = datos as Partial<ResumenGerencial> | null;
-      if (typeof resumen !== "object" || resumen === null || !resumen.alertas || !resumen.casos) {
-        throw new ErrorApi("La respuesta del servidor no tiene el formato esperado.");
-      }
-      return resumen as ResumenGerencial;
+      if (!esObjeto(datos) || !datos.alertas || !datos.casos) throw new ErrorApi(FORMATO_INESPERADO);
+      return datos as unknown as ResumenGerencial;
     },
 
-    async listarAlertas(filtros: FiltrosAlertas = {}) {
-      const parametros = new URLSearchParams();
-      for (const [clave, valor] of Object.entries(filtros)) {
-        if (valor !== undefined) parametros.set(clave, String(valor));
-      }
-      const datos = await pedir("/api/dashboard/alertas", parametros);
-      if (!Array.isArray(datos)) throw new ErrorApi("La respuesta del servidor no tiene el formato esperado.");
-      return datos as Alerta[];
+    async listarAlertas() {
+      const datos = await pedir("/api/dashboard/alertas");
+      if (!esObjeto(datos) || !Array.isArray(datos.alertas)) throw new ErrorApi(FORMATO_INESPERADO);
+      return datos as unknown as ListaAlertas;
+    },
+
+    async obtenerDetalleAlerta(id) {
+      const datos = await pedir(`/api/dashboard/alertas/${encodeURIComponent(id)}`, "No se encontró la alerta solicitada.");
+      if (!esObjeto(datos) || !datos.alerta || !datos.fila) throw new ErrorApi(FORMATO_INESPERADO);
+      return datos as unknown as DetalleAlerta;
     },
   };
 }

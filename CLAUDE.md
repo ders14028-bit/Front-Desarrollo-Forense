@@ -36,6 +36,15 @@ React (frontend/)  →  Spring Boot (backend/)  →  TheHive API (/api/v1/query)
 - **Vista unificada**: por ahora solo un marcador "En construcción". Más adelante será una tabla
   de alertas con filtros y columnas extra (¿tiene caso?, ¿fuera de SLA?, antigüedad) y un panel
   de detalle.
+- **Vista unificada** (decisiones aprobadas): tabla de alertas con columnas severidad, título
+  (con herramienta y tipo debajo), estado, antigüedad, SLA y caso; en celular, tarjetas. Orden por
+  defecto en tres niveles: sin atender fuera de SLA → sin atender dentro de SLA → el resto, y en
+  cada nivel severidad descendente y la más antigua primero. Filtros y paginación (25) en el
+  FRONTEND sobre la lista de los últimos 30 días (tope 1000); el encabezado de la lista dice
+  siempre "últimos 30 días". Filtros, página y alerta abierta se conservan al cambiar de pestaña.
+  Detalle en panel lateral, con línea de tiempo y enlaces "Abrir en TheHive" (URL en `config/`).
+- **Contrato**: `docs/contrato-api.md` describe los tipos y endpoints para el backend. El backend
+  calcula los campos derivados (tipo, SLA, caso); las reglas están en `src/utils/alertas.ts`.
 - **Pruebas**: Vitest para `src/utils/` (métricas y fechas en `America/Bogota`).
 - **Ramas**: el frontend se desarrolla en `feature/frontend`. `.idea/` está en `.gitignore`.
 

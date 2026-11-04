@@ -34,6 +34,20 @@ export const NOMBRES_LEGIBLES: Record<string, string> = {
   "inteligencia-misp": "Inteligencia MISP",
 };
 
+/** Ventana de la lista de alertas, en días (igual que la serie por día del resumen). */
+export const VENTANA_ALERTAS_DIAS = 30;
+/** Máximo de alertas que devuelve la lista; si hay más, `truncado` es true. */
+export const TOPE_ALERTAS = 1000;
+
+/**
+ * Enlaces "Abrir en TheHive". Solo se usan para abrir la página en otra pestaña: el frontend
+ * nunca llama a TheHive. PENDIENTE: confirmar el formato exacto de las rutas (¿`/alerts/<id>/details`
+ * y `/cases/<id>/details`? ¿con `~` en el id?) con el grupo de TheHive.
+ */
+export const THEHIVE_URL_BASE = "https://srvlinuxqa.tail2ab6e9.ts.net:8445";
+export const THEHIVE_RUTA_ALERTA = (id: string) => `/alerts/${id}/details`;
+export const THEHIVE_RUTA_CASO = (id: string) => `/cases/${id}/details`;
+
 /** Intervalo de refresco automático. */
 export const REFRESCO_MS = 30_000;
 

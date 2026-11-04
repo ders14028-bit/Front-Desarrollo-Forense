@@ -1,6 +1,7 @@
 import { generarMocks } from "../mocks";
-import { calcularResumen, tipoAmenaza } from "../utils/metricas";
-import { ErrorApi, TIPO_SIN_CLASIFICAR, type FiltrosAlertas, type FuenteDatos } from "./tipos";
+import { construirDetalle, construirListaAlertas } from "../utils/alertas";
+import { calcularResumen } from "../utils/metricas";
+import { ErrorApi, type FuenteDatos } from "./tipos";
 
 /** Semilla fija: los mocks salen siempre con la misma forma. */
 const SEMILLA = 2026;
@@ -18,8 +19,9 @@ interface OpcionesMock {
 const esperar = (ms: number) => (ms > 0 ? new Promise<void>((r) => setTimeout(r, ms)) : Promise.resolve());
 
 /**
- * Fuente de datos falsa. Los datos crudos se generan UNA vez, al crearla; el resumen se calcula
- * con la hora actual en CADA llamada, así las antigüedades avanzan como con datos reales.
+ * Fuente de datos falsa. Los datos crudos se generan UNA vez, al crearla; el resumen, la lista y
+ * el detalle se calculan con la hora actual en CADA llamada, así las antigüedades avanzan como
+ * con datos reales.
  */
 export function crearFuenteMock(opciones: OpcionesMock = {}): FuenteDatos {
   const ahora = opciones.ahora ?? Date.now;
@@ -38,15 +40,16 @@ export function crearFuenteMock(opciones: OpcionesMock = {}): FuenteDatos {
       return calcularResumen(alertas, casos, tareas, ahora());
     },
 
-    async listarAlertas(filtros: FiltrosAlertas = {}) {
+    async listarAlertas() {
       await simularRed();
-      const resultado = alertas
-        .filter((a) => filtros.estado === undefined || a.status === filtros.estado)
-        .filter((a) => filtros.severidad === undefined || a.severity === filtros.severidad)
-        .filter((a) => filtros.origen === undefined || a.source === filtros.origen)
-        .filter((a) => filtros.tipo === undefined || (tipoAmenaza(a) ?? TIPO_SIN_CLASIFICAR) === filtros.tipo)
-        .sort((x, y) => y._createdAt - x._createdAt);
-      return filtros.limite === undefined ? resultado : resultado.slice(0, filtros.limite);
+      return construirListaAlertas(alertas, casos, ahora());
+    },
+
+    async obtenerDetalleAlerta(id) {
+      await simularRed();
+      const detalle = construirDetalle(id, alertas, casos, tareas, ahora());
+      if (!detalle) throw new ErrorApi("No se encontró la alerta solicitada.");
+      return detalle;
     },
   };
 }
