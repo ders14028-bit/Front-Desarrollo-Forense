@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diaBogota, etiquetaDia, formatoAntiguedad, formatoHora, ultimosDias } from "./fechas";
+import { diaBogota, diaCorto, etiquetaDia, formatoAntiguedad, formatoHora, ultimosDias } from "./fechas";
 
 // Bogotá es UTC−5 todo el año (sin horario de verano).
 const bogota = (a: number, m: number, d: number, h = 12, min = 0) => Date.UTC(a, m - 1, d, h + 5, min);
@@ -46,6 +46,13 @@ describe("ultimosDias", () => {
     // 03:00 UTC del 2 nov = 22:00 del 1 nov en Bogotá
     const dias = ultimosDias(2, Date.UTC(2026, 10, 2, 3, 0));
     expect(dias).toEqual(["2026-10-31", "2026-11-01"]);
+  });
+});
+
+describe("diaCorto", () => {
+  it("número y mes abreviado", () => {
+    expect(diaCorto("2026-11-03")).toBe("3 nov");
+    expect(diaCorto("2026-12-25")).toBe("25 dic");
   });
 });
 

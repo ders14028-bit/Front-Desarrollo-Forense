@@ -41,11 +41,17 @@ export function ultimosDias(n: number, ahora: number = Date.now()): string[] {
   return dias;
 }
 
+/** "3 nov" a partir de `YYYY-MM-DD`. */
+export function diaCorto(dia: string): string {
+  const [, mes, numero] = dia.split("-").map(Number);
+  return `${numero} ${MESES_CORTOS[mes - 1]}`;
+}
+
 /** "Hoy" para el día actual; "1 nov" el primer día del mes; si no, solo el número. */
 export function etiquetaDia(dia: string, ahora: number = Date.now()): string {
   if (dia === diaBogota(ahora)) return "Hoy";
-  const [, mes, numero] = dia.split("-").map(Number);
-  return numero === 1 ? `1 ${MESES_CORTOS[mes - 1]}` : String(numero);
+  const numero = Number(dia.split("-")[2]);
+  return numero === 1 ? diaCorto(dia) : String(numero);
 }
 
 /**

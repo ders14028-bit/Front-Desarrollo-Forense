@@ -1,9 +1,11 @@
+import { GraficaEsqueleto } from "../components/graficas/TarjetaGrafica";
 import { AvisoError } from "../components/ui/AvisoError";
 import { NotaLaboratorio } from "../components/ui/NotaLaboratorio";
 import { TarjetaEsqueleto, TarjetaMetrica } from "../components/ui/TarjetaMetrica";
 import type { ResultadoResumen } from "../hooks/useResumen";
 import type { ResumenGerencial } from "../types/metricas";
 import { formatoAntiguedad, formatoHora } from "../utils/fechas";
+import { SeccionGraficas } from "./SeccionGraficas";
 
 const porcentaje = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 });
 const plural = (n: number, singular: string, plural: string) => `${n} ${n === 1 ? singular : plural}`;
@@ -102,16 +104,24 @@ function Esqueleto() {
       <p className="solo-lectores" role="status">
         Cargando datos…
       </p>
-      {[5, 5].map((n, i) => (
+      {[0, 1].map((i) => (
         <section className="seccion" key={i}>
           <div className="esqueleto esqueleto--seccion" aria-hidden="true" />
           <div className="rejilla">
-            {Array.from({ length: n }, (_, k) => (
+            {Array.from({ length: 5 }, (_, k) => (
               <TarjetaEsqueleto key={k} />
             ))}
           </div>
         </section>
       ))}
+      <section className="seccion">
+        <div className="esqueleto esqueleto--seccion" aria-hidden="true" />
+        <div className="rejilla-graficas">
+          {Array.from({ length: 3 }, (_, k) => (
+            <GraficaEsqueleto key={k} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -137,6 +147,7 @@ export function VistaGerencial({ resumen }: { resumen: ResultadoResumen }) {
       )}
       <SeccionAlertas resumen={datos} />
       <SeccionCasos resumen={datos} />
+      <SeccionGraficas resumen={datos} />
     </>
   );
 }

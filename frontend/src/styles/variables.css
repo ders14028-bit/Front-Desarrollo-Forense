@@ -16,6 +16,13 @@
   --aviso: #8a5a00;
   --foco: #1f5fbf;
   --esqueleto: #e3e6eb;
+  --pista: #e3e6eb;
+  /* Severidad: rojo, coral, ámbar y gris (barras con contraste ~3:1 o más sobre la tarjeta) */
+  --sev-critica: #c62828;
+  --sev-alta: #e0533d;
+  --sev-media: #c27c00;
+  --sev-baja: #818896;
+  --gris-claro: #b4bac6;
 
   --espacio-1: 0.25rem;
   --espacio-2: 0.5rem;
@@ -40,5 +47,11 @@
     --aviso: #f2b84b;
     --foco: #6ea3ff;
     --esqueleto: #2a3040;
+    --pista: #2a3040;
+    --sev-critica: #ff6b6b;
+    --sev-alta: #ff8a65;
+    --sev-media: #f2b84b;
+    --sev-baja: #8c95a6;
+    --gris-claro: #6f7788;
   }
 }

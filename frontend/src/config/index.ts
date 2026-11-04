@@ -19,6 +19,17 @@ export const ESTADO_FALSO_POSITIVO = "FalsePositive";
 /** Tag que marca los datos de prueba; si hay alertas o casos con él, se muestra "Datos de laboratorio". */
 export const TAG_LABORATORIO = "simulacion";
 
+/** Nombres legibles de los escenarios conocidos (etiqueta `escenario:<clave>`). El resto se formatea solo. */
+export const NOMBRES_ESCENARIO: Record<string, string> = {
+  "fuerza-bruta": "Fuerza bruta",
+  phishing: "Phishing",
+  malware: "Malware",
+  vulnerabilidad: "Vulnerabilidad",
+  escalamiento: "Escalamiento",
+  correlacion: "Correlación",
+  "inteligencia-misp": "Inteligencia MISP",
+};
+
 /** Intervalo de refresco automático. */
 export const REFRESCO_MS = 30_000;
 
