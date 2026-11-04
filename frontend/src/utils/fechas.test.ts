@@ -81,7 +81,9 @@ describe("formatoAntiguedad", () => {
     expect(formatoAntiguedad(0)).toBe("< 1 min");
     expect(formatoAntiguedad(-5 * MIN)).toBe("< 1 min");
     expect(formatoAntiguedad(59 * MIN + 59_000)).toBe("59 min");
-    expect(formatoAntiguedad(H)).toBe("1 h 0 min");
-    expect(formatoAntiguedad(D)).toBe("1 d 0 h");
+    expect(formatoAntiguedad(H)).toBe("1 h");
+    expect(formatoAntiguedad(D)).toBe("1 d");
+    expect(formatoAntiguedad(2 * D + 5 * MIN)).toBe("2 d");
+    expect(formatoAntiguedad(2 * H + 5 * MIN)).toBe("2 h 5 min");
   });
 });

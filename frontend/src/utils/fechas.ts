@@ -36,15 +36,18 @@ export function etiquetaDia(dia: string, ahora: number = Date.now()): string {
   return numero === 1 ? `1 ${MESES_CORTOS[mes - 1]}` : String(numero);
 }
 
-/** Antigüedad legible: "7 d 6 h", "3 h 20 min", "45 min" ("< 1 min" si es menos de un minuto). */
+/**
+ * Antigüedad legible, sin partes en cero: "7 d 6 h", "1 d", "3 h 20 min", "1 h", "45 min".
+ * Menos de un minuto: "< 1 min".
+ */
 export function formatoAntiguedad(ms: number): string {
   const minutosTotales = Math.floor(Math.max(0, Number.isFinite(ms) ? ms : 0) / 60_000);
   const dias = Math.floor(minutosTotales / 1440);
   const horas = Math.floor((minutosTotales % 1440) / 60);
   const minutos = minutosTotales % 60;
 
-  if (dias > 0) return `${dias} d ${horas} h`;
-  if (horas > 0) return `${horas} h ${minutos} min`;
+  if (dias > 0) return horas > 0 ? `${dias} d ${horas} h` : `${dias} d`;
+  if (horas > 0) return minutos > 0 ? `${horas} h ${minutos} min` : `${horas} h`;
   if (minutos > 0) return `${minutos} min`;
   return "< 1 min";
 }
