@@ -7,16 +7,20 @@ import {
   conOrden,
   conPagina,
   contarFiltrosActivos,
+  fechaActiva,
   ESTADO_TABLA_INICIAL,
   FILTROS_VACIOS,
   filtrarAlertas,
   hayFiltrosActivos,
   normalizarTexto,
+  opcionFecha,
   ordenarAlertas,
   paginar,
-  presetActivo,
   rangoPreset,
+  resolverFecha,
   textoMostrando,
+  textoResumenLista,
+  type FiltroFecha,
   type FiltrosTabla,
 } from "./tabla";
 
@@ -41,6 +45,9 @@ const fila = (p: Partial<AlertaFila> = {}): AlertaFila => ({
 });
 
 const ids = (filas: AlertaFila[]) => filas.map((f) => f.id);
+const filtrar = (filas: AlertaFila[], f: FiltrosTabla) => filtrarAlertas(filas, f, AHORA);
+const rango = (desde: string | null, hasta: string | null): FiltroFecha => ({ tipo: "rango", desde, hasta });
+const preset = (p: "hoy" | 7 | 14): FiltroFecha => ({ tipo: "preset", preset: p });
 const filtros = (p: Partial<FiltrosTabla>): FiltrosTabla => ({ ...FILTROS_VACIOS, ...p });
 
 // Seis alertas para probar los filtros
@@ -81,93 +88,160 @@ describe("normalizarTexto", () => {
 
 describe("filtrarAlertas: sin filtros y búsqueda", () => {
   it("sin filtros devuelve todas, en el mismo orden", () => {
-    expect(ids(filtrarAlertas(TODAS, FILTROS_VACIOS))).toEqual(["1", "2", "3", "4", "5", "6"]);
+    expect(ids(filtrar(TODAS, FILTROS_VACIOS))).toEqual(["1", "2", "3", "4", "5", "6"]);
   });
 
   it("la búsqueda no distingue mayúsculas ni tildes: 'suplantacion' encuentra 'suplantación'", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ busqueda: "suplantacion" })))).toEqual(["1"]);
-    expect(ids(filtrarAlertas(TODAS, filtros({ busqueda: "SUPLANTACIÓN" })))).toEqual(["1"]);
-    expect(ids(filtrarAlertas(TODAS, filtros({ busqueda: "area" })))).toEqual(["2"]); // 'área' sin tilde
-    expect(ids(filtrarAlertas(TODAS, filtros({ busqueda: "PHISHING" })))).toEqual(["2"]);
+    expect(ids(filtrar(TODAS, filtros({ busqueda: "suplantacion" })))).toEqual(["1"]);
+    expect(ids(filtrar(TODAS, filtros({ busqueda: "SUPLANTACIÓN" })))).toEqual(["1"]);
+    expect(ids(filtrar(TODAS, filtros({ busqueda: "area" })))).toEqual(["2"]); // 'área' sin tilde
+    expect(ids(filtrar(TODAS, filtros({ busqueda: "PHISHING" })))).toEqual(["2"]);
   });
 
   it("se recortan los espacios; solo espacios equivale a no buscar", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ busqueda: "   troyano  " })))).toEqual(["3"]);
-    expect(ids(filtrarAlertas(TODAS, filtros({ busqueda: "   " })))).toHaveLength(6);
+    expect(ids(filtrar(TODAS, filtros({ busqueda: "   troyano  " })))).toEqual(["3"]);
+    expect(ids(filtrar(TODAS, filtros({ busqueda: "   " })))).toHaveLength(6);
   });
 
   it("busca solo en el título", () => {
-    expect(filtrarAlertas(TODAS, filtros({ busqueda: "wazuh" }))).toEqual([]); // 'wazuh' es el origen, no está en ningún título
-    expect(filtrarAlertas(TODAS, filtros({ busqueda: "no-existe" }))).toEqual([]);
+    expect(filtrar(TODAS, filtros({ busqueda: "wazuh" }))).toEqual([]); // 'wazuh' es el origen, no está en ningún título
+    expect(filtrar(TODAS, filtros({ busqueda: "no-existe" }))).toEqual([]);
   });
 });
 
 describe("filtrarAlertas: selección múltiple (O) y combinación (Y)", () => {
   it("dentro de una selección múltiple basta con coincidir con una: Crítica o Alta", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ severidades: [4, 3] })))).toEqual(["1", "2", "3", "6"]);
+    expect(ids(filtrar(TODAS, filtros({ severidades: [4, 3] })))).toEqual(["1", "2", "3", "6"]);
   });
 
   it("entre filtros distintos es Y: (Crítica o Alta) y además Fuera de SLA", () => {
-    const r = filtrarAlertas(TODAS, filtros({ severidades: [4, 3], fueraDeSla: "si" }));
+    const r = filtrar(TODAS, filtros({ severidades: [4, 3], fueraDeSla: "si" }));
     expect(ids(r)).toEqual(["1"]);
   });
 
   it("estado y herramienta también son O dentro de su lista y Y entre sí", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ estados: ["New", "InProgress"] })))).toEqual(["1", "2", "6"]);
-    expect(ids(filtrarAlertas(TODAS, filtros({ origenes: ["wazuh", "misp"] })))).toEqual(["1", "3", "4", "6"]);
-    expect(ids(filtrarAlertas(TODAS, filtros({ estados: ["New", "InProgress"], origenes: ["wazuh"] })))).toEqual(["1", "6"]);
+    expect(ids(filtrar(TODAS, filtros({ estados: ["New", "InProgress"] })))).toEqual(["1", "2", "6"]);
+    expect(ids(filtrar(TODAS, filtros({ origenes: ["wazuh", "misp"] })))).toEqual(["1", "3", "4", "6"]);
+    expect(ids(filtrar(TODAS, filtros({ estados: ["New", "InProgress"], origenes: ["wazuh"] })))).toEqual(["1", "6"]);
   });
 });
 
 describe("filtrarAlertas: tipo", () => {
   it("elegir un tipo", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ tipos: ["phishing"] })))).toEqual(["1", "2"]);
+    expect(ids(filtrar(TODAS, filtros({ tipos: ["phishing"] })))).toEqual(["1", "2"]);
   });
 
   it("el filtro de tipo incluye 'Sin clasificar' (tipo null)", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ tipos: [null] })))).toEqual(["4", "5"]);
-    expect(ids(filtrarAlertas(TODAS, filtros({ tipos: ["malware", null] })))).toEqual(["3", "4", "5", "6"]);
+    expect(ids(filtrar(TODAS, filtros({ tipos: [null] })))).toEqual(["4", "5"]);
+    expect(ids(filtrar(TODAS, filtros({ tipos: ["malware", null] })))).toEqual(["3", "4", "5", "6"]);
   });
 });
 
 describe("filtrarAlertas: ¿tiene caso?", () => {
   it("Sí incluye las alertas con caseId aunque el caso no tenga datos (F4)", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ tieneCaso: "si" })))).toEqual(["3", "4"]);
+    expect(ids(filtrar(TODAS, filtros({ tieneCaso: "si" })))).toEqual(["3", "4"]);
   });
 
   it("No deja solo las que no tienen caseId", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ tieneCaso: "no" })))).toEqual(["1", "2", "5", "6"]);
+    expect(ids(filtrar(TODAS, filtros({ tieneCaso: "no" })))).toEqual(["1", "2", "5", "6"]);
   });
 });
 
 describe("filtrarAlertas: ¿fuera de SLA?", () => {
   it("Sí: solo las fuera de SLA", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ fueraDeSla: "si" })))).toEqual(["1"]);
+    expect(ids(filtrar(TODAS, filtros({ fueraDeSla: "si" })))).toEqual(["1"]);
   });
 
   it("No = dentro de SLA O sin SLA aplicable (las que no están sin atender)", () => {
     // F2 está dentro de SLA; F3, F4, F5 y F6 no están sin atender (sla.estado null). Todas cuentan como "No".
-    expect(ids(filtrarAlertas(TODAS, filtros({ fueraDeSla: "no" })))).toEqual(["2", "3", "4", "5", "6"]);
+    expect(ids(filtrar(TODAS, filtros({ fueraDeSla: "no" })))).toEqual(["2", "3", "4", "5", "6"]);
   });
 });
 
 describe("filtrarAlertas: fecha (días de Bogotá, inclusiva en los dos extremos)", () => {
   it("la alerta de las 23:30 de Bogotá cuenta en su día de Bogotá, no en el de UTC", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ desde: "2026-10-30", hasta: "2026-10-30" })))).toEqual(["1"]);
-    expect(ids(filtrarAlertas(TODAS, filtros({ desde: "2026-10-31", hasta: "2026-10-31" })))).toEqual(["4"]);
+    expect(ids(filtrar(TODAS, filtros({ fecha: rango("2026-10-30", "2026-10-30") })))).toEqual(["1"]);
+    expect(ids(filtrar(TODAS, filtros({ fecha: rango("2026-10-31", "2026-10-31") })))).toEqual(["4"]);
   });
 
   it("ambos extremos son inclusivos: 23:59:59 del 31 oct y 00:00 del 1 nov", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ desde: "2026-10-31", hasta: "2026-11-01" })))).toEqual(["3", "4"]);
+    expect(ids(filtrar(TODAS, filtros({ fecha: rango("2026-10-31", "2026-11-01") })))).toEqual(["3", "4"]);
   });
 
   it("solo desde, o solo hasta, deja el otro extremo abierto", () => {
-    expect(ids(filtrarAlertas(TODAS, filtros({ desde: "2026-11-02" })))).toEqual(["2", "6"]);
-    expect(ids(filtrarAlertas(TODAS, filtros({ hasta: "2026-10-30" })))).toEqual(["1", "5"]);
+    expect(ids(filtrar(TODAS, filtros({ fecha: rango("2026-11-02", null) })))).toEqual(["2", "6"]);
+    expect(ids(filtrar(TODAS, filtros({ fecha: rango(null, "2026-10-30") })))).toEqual(["1", "5"]);
   });
 
   it("un rango invertido (desde después de hasta) no deja pasar nada", () => {
-    expect(filtrarAlertas(TODAS, filtros({ desde: "2026-11-03", hasta: "2026-10-01" }))).toEqual([]);
+    expect(filtrar(TODAS, filtros({ fecha: rango("2026-11-03", "2026-10-01") }))).toEqual([]);
+  });
+
+  it("un rango sin ningún extremo no filtra", () => {
+    expect(filtrar(TODAS, filtros({ fecha: rango(null, null) }))).toHaveLength(6);
+  });
+});
+
+describe("filtros de fecha con preset (se resuelven con el 'ahora' de cada refresco)", () => {
+  it("'Hoy' = desde las 00:00 de Bogotá de hoy", () => {
+    expect(ids(filtrar(TODAS, filtros({ fecha: preset("hoy") })))).toEqual(["2"]);
+  });
+
+  it("'Hoy' no incluye el último segundo de ayer, sí las 00:00 de hoy", () => {
+    const ayer = fila({ id: "ayer", creadaEn: bog(11, 2, 23, 59, 59) });
+    const medianoche = fila({ id: "medianoche", creadaEn: bog(11, 3, 0, 0) });
+    expect(ids(filtrar([ayer, medianoche], filtros({ fecha: preset("hoy") })))).toEqual(["medianoche"]);
+  });
+
+  it("7 días = hoy y los 6 anteriores (28 oct a 3 nov); 14 días = desde el 21 oct", () => {
+    const del25 = fila({ id: "del25", creadaEn: bog(10, 25, 12, 0) }); // 9 días atrás: fuera de 7, dentro de 14
+    const todas = [...TODAS, del25];
+    expect(ids(filtrar(todas, filtros({ fecha: preset(7) })))).toEqual(["1", "2", "3", "4", "6"]);
+    expect(ids(filtrar(todas, filtros({ fecha: preset(14) })))).toEqual(["1", "2", "3", "4", "6", "del25"]);
+  });
+
+  it("un '7 días' elegido ayer sigue siendo '7 días' hoy, con las fechas corridas", () => {
+    const filtro = filtros({ fecha: preset(7) }); // el MISMO filtro guardado, sin recalcular nada
+
+    const ayer = AHORA - 86_400_000;
+    expect(resolverFecha(filtro.fecha, ayer)).toEqual({ desde: "2026-10-27", hasta: "2026-11-02" });
+    expect(resolverFecha(filtro.fecha, AHORA)).toEqual({ desde: "2026-10-28", hasta: "2026-11-03" });
+
+    // ayer entraba la del 27 oct y no la del 3 nov; hoy es al revés
+    const del27 = fila({ id: "del27", creadaEn: bog(10, 27, 12, 0) });
+    const del3 = fila({ id: "del3", creadaEn: bog(11, 3, 9, 0) });
+    expect(ids(filtrarAlertas([del27, del3], filtro, ayer))).toEqual(["del27"]);
+    expect(ids(filtrarAlertas([del27, del3], filtro, AHORA))).toEqual(["del3"]);
+  });
+
+  it("el filtro sigue siendo un preset: sin fechas guardadas", () => {
+    const f = filtros({ fecha: preset(7) });
+    expect(f.fecha).toEqual({ tipo: "preset", preset: 7 });
+    expect(opcionFecha(f.fecha)).toBe(7);
+  });
+
+  it("un rango, en cambio, guarda fechas fijas y NO se corre con el tiempo", () => {
+    const f = filtros({ fecha: rango("2026-10-28", "2026-11-03") });
+    expect(resolverFecha(f.fecha, AHORA)).toEqual({ desde: "2026-10-28", hasta: "2026-11-03" });
+    expect(resolverFecha(f.fecha, AHORA + 5 * 86_400_000)).toEqual({ desde: "2026-10-28", hasta: "2026-11-03" });
+  });
+});
+
+describe("opcionFecha y fechaActiva", () => {
+  it("sin filtro = 30 días; preset; o rango", () => {
+    expect(opcionFecha(null)).toBe(30);
+    expect(opcionFecha(preset("hoy"))).toBe("hoy");
+    expect(opcionFecha(preset(14))).toBe(14);
+    expect(opcionFecha(rango("2026-10-30", "2026-11-01"))).toBe("rango");
+    // un rango con las mismas fechas que un preset sigue siendo "rango"
+    expect(opcionFecha(rango("2026-10-28", "2026-11-03"))).toBe("rango");
+  });
+
+  it("solo limita si hay preset o algún extremo del rango", () => {
+    expect(fechaActiva(null)).toBe(false);
+    expect(fechaActiva(rango(null, null))).toBe(false);
+    expect(fechaActiva(rango("2026-10-30", null))).toBe(true);
+    expect(fechaActiva(preset(7))).toBe(true);
   });
 });
 
@@ -175,6 +249,7 @@ describe("hayFiltrosActivos", () => {
   it("sin filtros, o con una búsqueda de solo espacios, no hay filtros activos", () => {
     expect(hayFiltrosActivos(FILTROS_VACIOS)).toBe(false);
     expect(hayFiltrosActivos(filtros({ busqueda: "   " }))).toBe(false);
+    expect(hayFiltrosActivos(filtros({ fecha: rango(null, null) }))).toBe(false);
   });
 
   it("cualquier filtro aplicado cuenta", () => {
@@ -185,53 +260,32 @@ describe("hayFiltrosActivos", () => {
     expect(hayFiltrosActivos(filtros({ tipos: [null] }))).toBe(true);
     expect(hayFiltrosActivos(filtros({ tieneCaso: "no" }))).toBe(true);
     expect(hayFiltrosActivos(filtros({ fueraDeSla: "si" }))).toBe(true);
-    expect(hayFiltrosActivos(filtros({ desde: "2026-11-01" }))).toBe(true);
-    expect(hayFiltrosActivos(filtros({ hasta: "2026-11-01" }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ fecha: rango("2026-11-01", null) }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ fecha: rango(null, "2026-11-01") }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ fecha: preset(7) }))).toBe(true);
   });
 });
 
 describe("rangoPreset", () => {
-  it("'Hoy' va desde las 00:00 de Bogotá de hoy: un solo día", () => {
+  it("'Hoy' es un solo día; 7, 14 y 30 días terminan hoy (inclusive)", () => {
     expect(rangoPreset("hoy", AHORA)).toEqual({ desde: "2026-11-03", hasta: "2026-11-03" });
-    const hoy = filtrarAlertas(TODAS, filtros(rangoPreset("hoy", AHORA)));
-    expect(ids(hoy)).toEqual(["2"]);
-  });
-
-  it("'Hoy' no incluye el último segundo de ayer, sí incluye las 00:00 de hoy", () => {
-    const ayer = fila({ id: "ayer", creadaEn: bog(11, 2, 23, 59, 59) });
-    const medianoche = fila({ id: "medianoche", creadaEn: bog(11, 3, 0, 0) });
-    const r = filtrarAlertas([ayer, medianoche], filtros(rangoPreset("hoy", AHORA)));
-    expect(ids(r)).toEqual(["medianoche"]);
-  });
-
-  it("7, 14 y 30 días terminan hoy (inclusive)", () => {
     expect(rangoPreset(7, AHORA)).toEqual({ desde: "2026-10-28", hasta: "2026-11-03" });
     expect(rangoPreset(14, AHORA)).toEqual({ desde: "2026-10-21", hasta: "2026-11-03" });
     expect(rangoPreset(30, AHORA)).toEqual({ desde: "2026-10-05", hasta: "2026-11-03" });
   });
 });
 
-describe("presetActivo", () => {
-  it("sin fechas: 30 días (toda la ventana)", () => {
-    expect(presetActivo({ desde: null, hasta: null }, AHORA)).toBe(30);
+describe("textoResumenLista", () => {
+  it("sin filtros: 'N alertas · últimos 30 días'", () => {
+    expect(textoResumenLista(40, 40, false, 30)).toBe("40 alertas · últimos 30 días");
+    expect(textoResumenLista(1, 1, false, 30)).toBe("1 alerta · últimos 30 días");
+    expect(textoResumenLista(0, 0, false, 30)).toBe("0 alertas · últimos 30 días");
   });
 
-  it("reconoce hoy, 7 y 14 días", () => {
-    expect(presetActivo({ desde: "2026-11-03", hasta: "2026-11-03" }, AHORA)).toBe("hoy");
-    expect(presetActivo({ desde: "2026-10-28", hasta: "2026-11-03" }, AHORA)).toBe(7);
-    expect(presetActivo({ desde: "2026-10-21", hasta: "2026-11-03" }, AHORA)).toBe(14);
-  });
-
-  it("cualquier otro rango es 'rango' (incluso las fechas explícitas de toda la ventana)", () => {
-    expect(presetActivo({ desde: "2026-10-30", hasta: "2026-11-01" }, AHORA)).toBe("rango");
-    expect(presetActivo({ desde: "2026-10-28", hasta: null }, AHORA)).toBe("rango");
-    expect(presetActivo({ desde: null, hasta: "2026-11-03" }, AHORA)).toBe("rango");
-    expect(presetActivo({ desde: "2026-10-05", hasta: "2026-11-03" }, AHORA)).toBe("rango");
-  });
-
-  it("un preset de ayer ya no coincide hoy (pasa a 'rango' con sus fechas)", () => {
-    const manana = AHORA + 86_400_000;
-    expect(presetActivo({ desde: "2026-10-28", hasta: "2026-11-03" }, manana)).toBe("rango");
+  it("con filtros activos: '7 de 40 alertas · últimos 30 días'", () => {
+    expect(textoResumenLista(40, 7, true, 30)).toBe("7 de 40 alertas · últimos 30 días");
+    expect(textoResumenLista(40, 0, true, 30)).toBe("0 de 40 alertas · últimos 30 días");
+    expect(textoResumenLista(1, 1, true, 30)).toBe("1 de 1 alerta · últimos 30 días");
   });
 });
 
@@ -268,8 +322,10 @@ describe("contarFiltrosActivos (para 'Filtros (N)')", () => {
     expect(contarFiltrosActivos(filtros({ severidades: [4, 3, 2] }))).toBe(1);
     expect(contarFiltrosActivos(filtros({ severidades: [4], estados: ["New"], tipos: [null], origenes: ["wazuh"] }))).toBe(4);
     expect(contarFiltrosActivos(filtros({ tieneCaso: "si", fueraDeSla: "no" }))).toBe(2);
-    expect(contarFiltrosActivos(filtros({ desde: "2026-10-01", hasta: "2026-10-02" }))).toBe(1); // el rango es un solo filtro
-    expect(contarFiltrosActivos(filtros({ hasta: "2026-10-02" }))).toBe(1);
+    expect(contarFiltrosActivos(filtros({ fecha: rango("2026-10-01", "2026-10-02") }))).toBe(1); // el rango es un solo filtro
+    expect(contarFiltrosActivos(filtros({ fecha: rango(null, "2026-10-02") }))).toBe(1);
+    expect(contarFiltrosActivos(filtros({ fecha: preset(14) }))).toBe(1);
+    expect(contarFiltrosActivos(filtros({ fecha: rango(null, null) }))).toBe(0);
   });
 });
 
@@ -444,7 +500,7 @@ describe("calcularVista (filtrar → ordenar → paginar)", () => {
 
   it("aplica filtro, orden y página", () => {
     const e = conOrden(conFiltros(ESTADO_TABLA_INICIAL, filtros({ severidades: [4] })), "recientes");
-    const v = calcularVista(sesenta, e);
+    const v = calcularVista(sesenta, e, AHORA);
     expect(v.coincidencias).toBe(30);
     expect(v.pagina).toMatchObject({ pagina: 1, totalPaginas: 2, total: 30, desde: 1, hasta: 25 });
     expect(v.pagina.items[0].id).toBe("060"); // la más reciente primero
@@ -453,14 +509,14 @@ describe("calcularVista (filtrar → ordenar → paginar)", () => {
 
   it("si la página pedida ya no existe tras filtrar o refrescar, muestra la última", () => {
     const e = conPagina(conOrden(conFiltros(ESTADO_TABLA_INICIAL, filtros({ severidades: [4] })), "recientes"), 9);
-    const v = calcularVista(sesenta, { ...e, pagina: 9 });
+    const v = calcularVista(sesenta, { ...e, pagina: 9 }, AHORA);
     expect(v.pagina.pagina).toBe(2);
     expect(ids(v.pagina.items)).toEqual(["010", "008", "006", "004", "002"]);
     expect(textoMostrando(v.pagina)).toBe("Mostrando 26–30 de 30");
   });
 
   it("sin coincidencias: página vacía pero válida", () => {
-    const v = calcularVista(sesenta, conFiltros(ESTADO_TABLA_INICIAL, filtros({ busqueda: "zzz" })));
+    const v = calcularVista(sesenta, conFiltros(ESTADO_TABLA_INICIAL, filtros({ busqueda: "zzz" })), AHORA);
     expect(v.coincidencias).toBe(0);
     expect(v.pagina).toMatchObject({ items: [], pagina: 1, totalPaginas: 1, total: 0 });
   });

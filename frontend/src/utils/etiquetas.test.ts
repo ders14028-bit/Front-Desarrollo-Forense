@@ -4,12 +4,18 @@ import {
   etiquetaAntiguedad,
   etiquetaCaso,
   etiquetaEstadoAlerta,
+  etiquetaEstadoTarea,
+  etiquetaEtapaCaso,
   etiquetaOrigen,
+  etiquetaResolucion,
   etiquetaSeveridad,
   etiquetaSla,
   etiquetaTipo,
   nombreLegible,
   textoExcesoSla,
+  textoExcesoSlaLargo,
+  textoLimiteSla,
+  textoTranscurrido,
 } from "./etiquetas";
 
 const MIN = 60_000;
@@ -118,5 +124,52 @@ describe("etiquetaCaso", () => {
 
   it("tiene caseId pero el caso no está disponible", () => {
     expect(etiquetaCaso({ id: "~c9", numero: null, etapa: null, estado: null })).toBe("Caso no disponible");
+  });
+});
+
+describe("SLA en el detalle", () => {
+  it("límite del SLA de la severidad (null si no aplica)", () => {
+    expect(textoLimiteSla({ estado: "fuera", limiteMin: 15, excesoMs: 1 })).toBe("límite 15 min");
+    expect(textoLimiteSla({ estado: "dentro", limiteMin: 120, excesoMs: null })).toBe("límite 2 h");
+    expect(textoLimiteSla({ estado: "dentro", limiteMin: 240, excesoMs: null })).toBe("límite 4 h");
+    expect(textoLimiteSla({ estado: null, limiteMin: 30, excesoMs: null })).toBeNull();
+  });
+
+  it("exceso en frase larga, solo fuera de SLA", () => {
+    expect(textoExcesoSlaLargo({ estado: "fuera", limiteMin: 15, excesoMs: 2 * D + 4 * H })).toBe("excedido por 2 d 4 h");
+    expect(textoExcesoSlaLargo({ estado: "fuera", limiteMin: 15, excesoMs: 5 })).toBe("excedido por menos de 1 min");
+    expect(textoExcesoSlaLargo({ estado: "dentro", limiteMin: 15, excesoMs: null })).toBeNull();
+    expect(textoExcesoSlaLargo({ estado: null, limiteMin: 15, excesoMs: null })).toBeNull();
+  });
+});
+
+describe("tiempo transcurrido, resolución y tareas", () => {
+  it("'+3 h 20 min'; vacío si no ha pasado tiempo; 'menos de 1 min' al principio", () => {
+    expect(textoTranscurrido(3 * H + 20 * MIN)).toBe("+3 h 20 min");
+    expect(textoTranscurrido(2 * D)).toBe("+2 d");
+    expect(textoTranscurrido(30_000)).toBe("+menos de 1 min");
+    expect(textoTranscurrido(0)).toBe("");
+    expect(textoTranscurrido(-5)).toBe("");
+  });
+
+  it("resolución: conocidas en español, desconocidas tal cual", () => {
+    expect(etiquetaResolucion("TruePositive")).toBe("Confirmado");
+    expect(etiquetaResolucion("FalsePositive")).toBe("Falso positivo");
+    expect(etiquetaResolucion("Duplicated")).toBe("Duplicado");
+    expect(etiquetaResolucion("Rara")).toBe("Rara");
+  });
+
+  it("etapa del caso y estado de la tarea", () => {
+    expect(["New", "InProgress", "Closed"].map((e) => etiquetaEtapaCaso(e as "New" | "InProgress" | "Closed"))).toEqual([
+      "Abierto",
+      "En progreso",
+      "Cerrado",
+    ]);
+    expect((["Waiting", "InProgress", "Completed", "Cancel"] as const).map(etiquetaEstadoTarea)).toEqual([
+      "En espera",
+      "En curso",
+      "Completada",
+      "Cancelada",
+    ]);
   });
 });

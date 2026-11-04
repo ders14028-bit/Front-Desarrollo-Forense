@@ -2,7 +2,7 @@ import type { EstadoAlerta, Severidad } from "../types/alerta";
 import type { AlertaFila } from "../types/listaAlertas";
 import { etiquetaEstadoAlerta, etiquetaOrigen, etiquetaSeveridad, etiquetaTipo } from "./etiquetas";
 import { diaCorto } from "./fechas";
-import { filtrarAlertas, presetActivo, type FiltrosTabla } from "./tabla";
+import { fechaActiva, filtrarAlertas, type FiltroFecha, type FiltrosTabla } from "./tabla";
 
 /** Opciones y chips de los filtros de la Vista unificada. Funciones puras. */
 
@@ -32,10 +32,10 @@ const porEtiqueta = <V>(a: OpcionFiltro<V>, b: OpcionFiltro<V>) => a.etiqueta.lo
  * respeta los DEMÁS filtros activos (no el suyo propio), así "Wazuh (3)" dice cuántas alertas verías
  * si marcaras Wazuh con los otros filtros tal como están. Las opciones salen de los datos (más las ya
  * seleccionadas, para que no desaparezcan); herramientas y tipos van en orden alfabético y "Sin
- * clasificar" al final.
+ * clasificar" al final. `ahora` (ms) resuelve los presets de fecha.
  */
-export function calcularOpciones(filas: AlertaFila[], filtros: FiltrosTabla): OpcionesFiltro {
-  const sin = (parcial: Partial<FiltrosTabla>) => filtrarAlertas(filas, { ...filtros, ...parcial });
+export function calcularOpciones(filas: AlertaFila[], filtros: FiltrosTabla, ahora: number): OpcionesFiltro {
+  const sin = (parcial: Partial<FiltrosTabla>) => filtrarAlertas(filas, { ...filtros, ...parcial }, ahora);
 
   const baseSeveridad = sin({ severidades: [] });
   const baseEstado = sin({ estados: [] });
@@ -91,7 +91,7 @@ export interface ChipFiltro {
 }
 
 /** Un chip por cada valor seleccionado, en el orden de la barra de filtros. */
-export function chipsActivos(f: FiltrosTabla, ahora: number): ChipFiltro[] {
+export function chipsActivos(f: FiltrosTabla): ChipFiltro[] {
   const chips: ChipFiltro[] = [];
 
   const texto = f.busqueda.trim();
@@ -140,19 +140,16 @@ export function chipsActivos(f: FiltrosTabla, ahora: number): ChipFiltro[] {
       quitar: (x) => ({ ...x, fueraDeSla: "todos" }),
     });
   }
-  if (f.desde !== null || f.hasta !== null) {
-    chips.push({ id: "fecha", etiqueta: `Fecha: ${textoFecha(f, ahora)}`, quitar: (x) => ({ ...x, desde: null, hasta: null }) });
+  if (f.fecha !== null && fechaActiva(f.fecha)) {
+    chips.push({ id: "fecha", etiqueta: `Fecha: ${textoFecha(f.fecha)}`, quitar: (x) => ({ ...x, fecha: null }) });
   }
 
   return chips;
 }
 
-function textoFecha(f: Pick<FiltrosTabla, "desde" | "hasta">, ahora: number): string {
-  const preset = presetActivo(f, ahora);
-  if (preset === "hoy") return "hoy";
-  if (preset === 7 || preset === 14) return `últimos ${preset} días`;
-  if (f.desde !== null && f.hasta !== null) {
-    return f.desde === f.hasta ? diaCorto(f.desde) : `${diaCorto(f.desde)} – ${diaCorto(f.hasta)}`;
-  }
-  return f.desde !== null ? `desde ${diaCorto(f.desde)}` : `hasta ${diaCorto(f.hasta!)}`;
+function textoFecha(fecha: FiltroFecha): string {
+  if (fecha.tipo === "preset") return fecha.preset === "hoy" ? "hoy" : `últimos ${fecha.preset} días`;
+  const { desde, hasta } = fecha;
+  if (desde !== null && hasta !== null) return desde === hasta ? diaCorto(desde) : `${diaCorto(desde)} – ${diaCorto(hasta)}`;
+  return desde !== null ? `desde ${diaCorto(desde)}` : `hasta ${diaCorto(hasta!)}`;
 }

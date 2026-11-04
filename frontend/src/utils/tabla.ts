@@ -22,10 +22,26 @@ export interface FiltrosTabla {
   tieneCaso: TresEstados;
   /** "si": fuera de SLA. "no": dentro de SLA o sin SLA aplicable (no está sin atender). */
   fueraDeSla: TresEstados;
-  /** Día Bogotá `YYYY-MM-DD`, inclusive. null = sin límite. */
-  desde: string | null;
-  hasta: string | null;
+  /** null = sin filtro de fecha (toda la ventana de 30 días). */
+  fecha: FiltroFecha | null;
 }
+
+/**
+ * Filtro de fecha. Un PRESET se guarda como preset (no como fechas) y se resuelve con el "ahora" de
+ * cada refresco: un tablero abierto durante días sigue mostrando "los últimos 7 días". Solo un RANGO
+ * guarda fechas fijas.
+ */
+export type FiltroFecha =
+  | { tipo: "preset"; preset: PresetFiltro }
+  | {
+      tipo: "rango";
+      /** Día Bogotá `YYYY-MM-DD`, inclusive. null = sin límite. */
+      desde: string | null;
+      hasta: string | null;
+    };
+
+/** "30 días" no es un preset de filtro: es la ventana completa, o sea, sin filtro de fecha. */
+export type PresetFiltro = "hoy" | 7 | 14;
 
 export const FILTROS_VACIOS: FiltrosTabla = {
   busqueda: "",
@@ -35,9 +51,13 @@ export const FILTROS_VACIOS: FiltrosTabla = {
   tipos: [],
   tieneCaso: "todos",
   fueraDeSla: "todos",
-  desde: null,
-  hasta: null,
+  fecha: null,
 };
+
+/** ¿Hay un filtro de fecha que realmente limite algo? (un rango sin ningún extremo no limita nada). */
+export function fechaActiva(fecha: FiltroFecha | null): boolean {
+  return fecha !== null && !(fecha.tipo === "rango" && fecha.desde === null && fecha.hasta === null);
+}
 
 /** ¿Hay algún filtro aplicado? (una búsqueda de solo espacios no cuenta). */
 export function hayFiltrosActivos(f: FiltrosTabla): boolean {
@@ -49,8 +69,7 @@ export function hayFiltrosActivos(f: FiltrosTabla): boolean {
     f.tipos.length > 0 ||
     f.tieneCaso !== "todos" ||
     f.fueraDeSla !== "todos" ||
-    f.desde !== null ||
-    f.hasta !== null
+    fechaActiva(f.fecha)
   );
 }
 
@@ -70,9 +89,11 @@ function pasaTresEstados(filtro: TresEstados, valor: boolean): boolean {
 /**
  * Entre filtros distintos se combinan con Y; dentro de una selección múltiple, con O.
  * Un rango con `desde` posterior a `hasta` no deja pasar ninguna alerta.
+ * `ahora` (ms) resuelve los presets de fecha ("Hoy", 7 o 14 días): debe ser el de cada refresco.
  */
-export function filtrarAlertas(filas: AlertaFila[], f: FiltrosTabla): AlertaFila[] {
+export function filtrarAlertas(filas: AlertaFila[], f: FiltrosTabla, ahora: number): AlertaFila[] {
   const texto = normalizarTexto(f.busqueda);
+  const { desde, hasta } = resolverFecha(f.fecha, ahora);
 
   return filas.filter((fila) => {
     if (texto !== "" && !normalizarTexto(fila.titulo).includes(texto)) return false;
@@ -83,10 +104,10 @@ export function filtrarAlertas(filas: AlertaFila[], f: FiltrosTabla): AlertaFila
     if (!pasaTresEstados(f.tieneCaso, fila.caso !== null)) return false;
     if (!pasaTresEstados(f.fueraDeSla, fila.sla.estado === "fuera")) return false;
 
-    if (f.desde !== null || f.hasta !== null) {
+    if (desde !== null || hasta !== null) {
       const dia = diaBogota(fila.creadaEn); // 'YYYY-MM-DD' se compara como texto
-      if (f.desde !== null && dia < f.desde) return false;
-      if (f.hasta !== null && dia > f.hasta) return false;
+      if (desde !== null && dia < desde) return false;
+      if (hasta !== null && dia > hasta) return false;
     }
     return true;
   });
@@ -100,19 +121,22 @@ export function rangoPreset(preset: PresetFecha, ahora: number): { desde: string
   return { desde: dias[0], hasta: dias[dias.length - 1] };
 }
 
+/** Días de Bogotá (inclusivos) que cubre un filtro de fecha en el instante `ahora`. null = sin límite. */
+export function resolverFecha(
+  fecha: FiltroFecha | null,
+  ahora: number,
+): { desde: string | null; hasta: string | null } {
+  if (fecha === null) return { desde: null, hasta: null };
+  if (fecha.tipo === "preset") return rangoPreset(fecha.preset, ahora);
+  return { desde: fecha.desde, hasta: fecha.hasta };
+}
+
 export type PresetActivo = PresetFecha | "rango";
 
-/**
- * Qué opción de fecha representa el rango actual: sin fechas = 30 (toda la ventana); si coincide
- * con "Hoy", 7 o 14 días, ese preset; cualquier otra cosa, "rango".
- */
-export function presetActivo(f: Pick<FiltrosTabla, "desde" | "hasta">, ahora: number): PresetActivo {
-  if (f.desde === null && f.hasta === null) return 30;
-  for (const preset of ["hoy", 7, 14] as const) {
-    const r = rangoPreset(preset, ahora);
-    if (f.desde === r.desde && f.hasta === r.hasta) return preset;
-  }
-  return "rango";
+/** Qué opción de fecha está elegida: sin filtro = 30 días (toda la ventana); preset; o rango. */
+export function opcionFecha(fecha: FiltroFecha | null): PresetActivo {
+  if (fecha === null) return 30;
+  return fecha.tipo === "preset" ? fecha.preset : "rango";
 }
 
 /**
@@ -140,7 +164,7 @@ export function contarFiltrosActivos(f: FiltrosTabla): number {
     f.tipos.length > 0,
     f.tieneCaso !== "todos",
     f.fueraDeSla !== "todos",
-    f.desde !== null || f.hasta !== null,
+    fechaActiva(f.fecha),
   ].filter(Boolean).length;
 }
 
@@ -250,11 +274,23 @@ export interface VistaTabla {
   pagina: Pagina<AlertaFila>;
   /** Alertas que cumplen los filtros (todas las páginas). */
   coincidencias: number;
+  /** Todas las alertas filtradas y ordenadas (todas las páginas): es la lista que recorre el panel de detalle. */
+  todas: AlertaFila[];
 }
 
-/** Filtra, ordena y pagina. Si la página pedida ya no existe, muestra la última que sí. */
-export function calcularVista(filas: AlertaFila[], estado: EstadoTabla, tamano = TAMANO_PAGINA): VistaTabla {
-  const filtradas = filtrarAlertas(filas, estado.filtros);
+/**
+ * Filtra, ordena y pagina. Si la página pedida ya no existe, muestra la última que sí.
+ * `ahora` (ms) resuelve los presets de fecha.
+ */
+export function calcularVista(filas: AlertaFila[], estado: EstadoTabla, ahora: number, tamano = TAMANO_PAGINA): VistaTabla {
+  const filtradas = filtrarAlertas(filas, estado.filtros, ahora);
   const ordenadas = ordenarAlertas(filtradas, estado.orden);
-  return { pagina: paginar(ordenadas, estado.pagina, tamano), coincidencias: filtradas.length };
+  return { pagina: paginar(ordenadas, estado.pagina, tamano), coincidencias: filtradas.length, todas: ordenadas };
+}
+
+/** "112 alertas · últimos 30 días", o con filtros activos "7 de 112 alertas · últimos 30 días". */
+export function textoResumenLista(total: number, coincidencias: number, conFiltros: boolean, dias: number): string {
+  const alertas = total === 1 ? "alerta" : "alertas";
+  const cantidad = conFiltros ? `${coincidencias} de ${total}` : `${total}`;
+  return `${cantidad} ${alertas} · últimos ${dias} días`;
 }

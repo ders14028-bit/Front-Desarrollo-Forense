@@ -10,30 +10,30 @@ import {
   ESTADO_TABLA_INICIAL,
   FILTROS_VACIOS,
   hayFiltrosActivos,
+  textoResumenLista,
   type EstadoTabla,
   type FiltrosTabla,
   type Orden,
 } from "../../utils/tabla";
 import { NotaLaboratorio } from "../ui/NotaLaboratorio";
+import { PanelDetalle } from "./detalle/PanelDetalle";
 import { BarraFiltros } from "./filtros/BarraFiltros";
 import { Paginacion } from "./Paginacion";
 import { TablaAlertas } from "./TablaAlertas";
 import { TarjetasAlertas } from "./TarjetasAlertas";
 
-interface Props {
-  lista: ListaAlertas;
-  /** Se llamará al elegir una alerta (el panel de detalle llega en un paso posterior). */
-  onAbrir?: (id: string) => void;
-}
-
-/** Cabecera, filtros, tabla (escritorio) o tarjetas (celular), paginación y estados vacíos de las alertas. */
-export function ListadoAlertas({ lista, onAbrir }: Props) {
+/** Cabecera, filtros, tabla (escritorio) o tarjetas (celular), paginación, estados vacíos y panel de detalle. */
+export function ListadoAlertas({ lista }: { lista: ListaAlertas }) {
   const [estado, setEstado] = useState<EstadoTabla>(ESTADO_TABLA_INICIAL);
   const [limpiezas, setLimpiezas] = useState(0);
+  const [abierta, setAbierta] = useState<string | null>(null);
   const raiz = useRef<HTMLElement>(null);
+  const origenDelPanel = useRef<string | null>(null);
 
-  const vista = useMemo(() => calcularVista(lista.alertas, estado), [lista.alertas, estado]);
-  const opciones = useMemo(() => calcularOpciones(lista.alertas, estado.filtros), [lista.alertas, estado.filtros]);
+  // Los presets de fecha ("7 días") se resuelven con el "ahora" de cada refresco.
+  const ahora = lista.generadoEn;
+  const vista = useMemo(() => calcularVista(lista.alertas, estado, ahora), [lista.alertas, estado, ahora]);
+  const opciones = useMemo(() => calcularOpciones(lista.alertas, estado.filtros, ahora), [lista.alertas, estado.filtros, ahora]);
   const { pagina } = vista;
 
   // Si tras un refresco la lista se achicó y la página pedida ya no existe, `calcularVista` ya muestra
@@ -60,18 +60,36 @@ export function ListadoAlertas({ lista, onAbrir }: Props) {
     setLimpiezas((n) => n + 1);
   }, []);
 
+  // --- Panel de detalle ---
+  const abrir = (id: string) => {
+    origenDelPanel.current = id;
+    setAbierta(id);
+  };
+  const cerrar = useCallback(() => setAbierta(null), []);
+
+  // Al cerrar el panel, el foco vuelve a la fila (o tarjeta) desde la que se abrió; si ya no está visible, a la lista.
+  useEffect(() => {
+    if (abierta !== null || origenDelPanel.current === null) return;
+    const id = origenDelPanel.current;
+    origenDelPanel.current = null;
+    const candidatos = Array.from(raiz.current?.querySelectorAll<HTMLElement>("[data-alerta-id]") ?? []);
+    const origen = candidatos.find((el) => el.dataset.alertaId === id && el.getClientRects().length > 0);
+    (origen ?? raiz.current)?.focus();
+  }, [abierta]);
+
+  const hayFiltros = hayFiltrosActivos(estado.filtros);
   const sinAlertas = lista.alertas.length === 0;
   const sinCoincidencias = !sinAlertas && vista.coincidencias === 0;
   const descripcion = `Alertas de los últimos ${VENTANA_ALERTAS_DIAS} días. Página ${pagina.pagina} de ${pagina.totalPaginas}.`;
 
   return (
-    <section ref={raiz} className="seccion" aria-labelledby="titulo-lista-alertas">
+    <section ref={raiz} tabIndex={-1} className="seccion lista-alertas" aria-labelledby="titulo-lista-alertas">
       <div className="lista-cabecera">
         <h2 id="titulo-lista-alertas" className="seccion__titulo">
           Alertas
         </h2>
         <p className="lista-cabecera__resumen">
-          {lista.total} {lista.total === 1 ? "alerta" : "alertas"} · últimos {VENTANA_ALERTAS_DIAS} días
+          {textoResumenLista(lista.total, vista.coincidencias, hayFiltros, VENTANA_ALERTAS_DIAS)}
         </p>
       </div>
 
@@ -93,7 +111,7 @@ export function ListadoAlertas({ lista, onAbrir }: Props) {
           filtros={estado.filtros}
           orden={estado.orden}
           opciones={opciones}
-          ahora={lista.generadoEn}
+          ahora={ahora}
           onFiltros={cambiarFiltros}
           onOrden={cambiarOrden}
           onLimpiar={limpiarFiltros}
@@ -104,7 +122,7 @@ export function ListadoAlertas({ lista, onAbrir }: Props) {
       {sinCoincidencias && (
         <div className="marcador">
           <p>Ninguna alerta coincide con los filtros</p>
-          {hayFiltrosActivos(estado.filtros) && (
+          {hayFiltros && (
             <button type="button" className="boton" onClick={limpiarFiltros}>
               Limpiar filtros
             </button>
@@ -114,11 +132,13 @@ export function ListadoAlertas({ lista, onAbrir }: Props) {
 
       {pagina.total > 0 && (
         <>
-          <TablaAlertas filas={pagina.items} descripcion={descripcion} onAbrir={onAbrir} />
-          <TarjetasAlertas filas={pagina.items} onAbrir={onAbrir} />
+          <TablaAlertas filas={pagina.items} descripcion={descripcion} onAbrir={abrir} />
+          <TarjetasAlertas filas={pagina.items} onAbrir={abrir} />
           <Paginacion pagina={pagina} onCambiar={irAPagina} />
         </>
       )}
+
+      {abierta !== null && <PanelDetalle id={abierta} filas={vista.todas} onCambiarAlerta={setAbierta} onCerrar={cerrar} />}
     </section>
   );
 }

@@ -6,7 +6,7 @@ import { TextoSla } from "./TextoSla";
 
 interface Props {
   filas: AlertaFila[];
-  /** Se llamará al elegir una alerta (el panel de detalle llega en un paso posterior). */
+  /** Se llama con el id al elegir una alerta. */
   onAbrir?: (id: string) => void;
 }
 
@@ -16,7 +16,13 @@ export function TarjetasAlertas({ filas, onAbrir }: Props) {
     <ul className="tarjetas-alertas">
       {filas.map((f) => (
         <li key={f.id}>
-          <button type="button" className={`tarjeta-alerta sev-${f.severidad}`} onClick={() => onAbrir?.(f.id)}>
+          <button
+            type="button"
+            className={`tarjeta-alerta sev-${f.severidad}`}
+            data-alerta-id={f.id}
+            aria-haspopup="dialog"
+            onClick={() => onAbrir?.(f.id)}
+          >
             <span className="tarjeta-alerta__cabecera">
               <InsigniaSeveridad severidad={f.severidad} />
               <span className="tarjeta-alerta__estado">{etiquetaEstadoAlerta(f.estado)}</span>

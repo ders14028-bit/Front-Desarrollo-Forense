@@ -42,7 +42,9 @@ React (frontend/)  →  Spring Boot (backend/)  →  TheHive API (/api/v1/query)
   cada nivel severidad descendente y la más antigua primero. Filtros y paginación (25) en el
   FRONTEND sobre la lista de los últimos 30 días (tope 1000); el encabezado de la lista dice
   siempre "últimos 30 días". Filtros, página y alerta abierta se conservan al cambiar de pestaña.
-  Detalle en panel lateral, con línea de tiempo y enlaces "Abrir en TheHive" (URL en `config/`).
+  Detalle en panel lateral (diálogo modal accesible), con línea de tiempo y enlaces "Abrir en TheHive" (URL en `config/`).
+  Los presets de fecha (Hoy, 7, 14 días) se guardan COMO PRESET y se recalculan con el "ahora" de cada refresco;
+  solo "Rango" guarda fechas fijas ("30 días" = sin filtro de fecha).
 - **Contrato**: `docs/contrato-api.md` describe los tipos y endpoints para el backend. El backend
   calcula los campos derivados (tipo, SLA, caso); las reglas están en `src/utils/alertas.ts`.
 - **Pruebas**: Vitest para `src/utils/` (métricas y fechas en `America/Bogota`).

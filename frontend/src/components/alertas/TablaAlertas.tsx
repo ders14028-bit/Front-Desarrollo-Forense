@@ -9,7 +9,7 @@ interface Props {
   filas: AlertaFila[];
   /** Texto oculto (<caption>) que describe la tabla a los lectores de pantalla. */
   descripcion: string;
-  /** Se llamará al elegir una alerta (el panel de detalle llega en un paso posterior). */
+  /** Se llama con el id al elegir una alerta (clic en la fila, o Enter sobre su botón). */
   onAbrir?: (id: string) => void;
 }
 
@@ -31,12 +31,13 @@ export function TablaAlertas({ filas, descripcion, onAbrir }: Props) {
         </thead>
         <tbody>
           {filas.map((f) => (
-            <tr key={f.id}>
+            // El clic en cualquier parte de la fila abre el detalle; el botón del título es el acceso con teclado y lectores.
+            <tr key={f.id} className="fila-alerta" onClick={() => onAbrir?.(f.id)}>
               <td>
                 <InsigniaSeveridad severidad={f.severidad} />
               </td>
               <th scope="row" className="celda-titulo">
-                <button type="button" className="fila-boton" onClick={() => onAbrir?.(f.id)}>
+                <button type="button" className="fila-boton" data-alerta-id={f.id} aria-haspopup="dialog">
                   {f.titulo}
                 </button>
                 <span className="fila-sub">

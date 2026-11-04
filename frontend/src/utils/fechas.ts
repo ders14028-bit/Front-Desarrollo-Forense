@@ -29,6 +29,12 @@ export function formatoHora(ms: number): string {
   return formateadorHora.format(new Date(ms));
 }
 
+/** "30 oct 2026, 23:30": fecha y hora en Bogotá. */
+export function formatoFechaHora(ms: number): string {
+  const dia = diaBogota(ms);
+  return `${diaCorto(dia)} ${dia.slice(0, 4)}, ${formatoHora(ms)}`;
+}
+
 /** Los `n` días (`YYYY-MM-DD`, del más antiguo al más reciente) que terminan hoy en Bogotá. */
 export function ultimosDias(n: number, ahora: number = Date.now()): string[] {
   const [a, m, d] = diaBogota(ahora).split("-").map(Number);

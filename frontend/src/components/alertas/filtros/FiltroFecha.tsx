@@ -1,14 +1,19 @@
-import { useEffect, useId, useState } from "react";
+import { useId } from "react";
 import { VENTANA_ALERTAS_DIAS } from "../../../config";
 import { ultimosDias } from "../../../utils/fechas";
-import { ajustarRango, presetActivo, rangoPreset, type PresetActivo } from "../../../utils/tabla";
+import {
+  ajustarRango,
+  opcionFecha,
+  resolverFecha,
+  type FiltroFecha as FiltroFechaTipo,
+  type PresetActivo,
+} from "../../../utils/tabla";
 
 interface Props {
-  desde: string | null;
-  hasta: string | null;
+  fecha: FiltroFechaTipo | null;
   /** Instante de la lista: define "hoy" y los límites de los calendarios. */
   ahora: number;
-  onCambiar: (desde: string | null, hasta: string | null) => void;
+  onCambiar: (fecha: FiltroFechaTipo | null) => void;
 }
 
 const OPCIONES: { valor: PresetActivo; etiqueta: string }[] = [
@@ -20,41 +25,35 @@ const OPCIONES: { valor: PresetActivo; etiqueta: string }[] = [
 ];
 
 /**
- * Fecha: Hoy · 7 · 14 · 30 días · Rango. "30 días" es toda la ventana (sin filtro de fecha).
+ * Fecha: Hoy · 7 · 14 · 30 días · Rango. Los presets se guardan como preset (se recalculan con el "ahora" de
+ * cada refresco); solo "Rango" guarda fechas fijas. "30 días" es toda la ventana (sin filtro de fecha).
  * "Rango" muestra dos calendarios; "desde" nunca puede quedar después de "hasta".
  */
-export function FiltroFecha({ desde, hasta, ahora, onCambiar }: Props) {
+export function FiltroFecha({ fecha, ahora, onCambiar }: Props) {
   const nombre = useId();
   const idDesde = useId();
   const idHasta = useId();
 
-  // "Rango" se puede elegir aunque las fechas actuales coincidan con un preset (por ejemplo "Hoy").
-  const [modoRango, setModoRango] = useState(false);
-  const seleccionado: PresetActivo = modoRango ? "rango" : presetActivo({ desde, hasta }, ahora);
+  const seleccionado = opcionFecha(fecha);
   const primerDia = ultimosDias(VENTANA_ALERTAS_DIAS, ahora)[0];
   const hoy = ultimosDias(1, ahora)[0];
-
-  // Sin ninguna fecha (se quitó el chip, "Limpiar filtros" o se borraron los dos calendarios) no hay rango que editar.
-  useEffect(() => {
-    if (desde === null && hasta === null) setModoRango(false);
-  }, [desde, hasta]);
+  const { desde, hasta } = resolverFecha(fecha, ahora);
 
   function elegir(opcion: PresetActivo) {
-    setModoRango(opcion === "rango");
     if (opcion === "rango") {
-      // Parte de las fechas actuales, o de toda la ventana si no había ninguna.
-      onCambiar(desde ?? primerDia, hasta ?? hoy);
+      // Se empieza a editar fechas: parte de las que se estaban viendo, o de toda la ventana si no había ninguna.
+      onCambiar({ tipo: "rango", desde: desde ?? primerDia, hasta: hasta ?? hoy });
     } else if (opcion === 30) {
-      onCambiar(null, null);
+      onCambiar(null);
     } else {
-      const r = rangoPreset(opcion, ahora);
-      onCambiar(r.desde, r.hasta);
+      onCambiar({ tipo: "preset", preset: opcion });
     }
   }
 
   function editar(extremo: "desde" | "hasta", valor: string) {
     const r = ajustarRango(desde, hasta, extremo, valor === "" ? null : valor);
-    onCambiar(r.desde, r.hasta);
+    // Sin ninguna fecha ya no hay rango que editar: vuelve a "30 días".
+    onCambiar(r.desde === null && r.hasta === null ? null : { tipo: "rango", desde: r.desde, hasta: r.hasta });
   }
 
   return (

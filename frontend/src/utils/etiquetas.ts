@@ -2,6 +2,7 @@ import { ESTADO_CONFIRMADO, ESTADO_FALSO_POSITIVO, NOMBRES_LEGIBLES } from "../c
 import type { EstadoAlerta, Severidad } from "../types/alerta";
 import type { EtapaCaso } from "../types/caso";
 import type { CasoResumen, SlaAlerta } from "../types/listaAlertas";
+import type { EstadoTarea } from "../types/tarea";
 import { formatoAntiguedad } from "./fechas";
 
 /** Todas las etiquetas en español de la interfaz para estados, severidad, SLA, caso y nombres. */
@@ -52,6 +53,17 @@ export function etiquetaSla(sla: SlaAlerta): string {
   return "—"; // no aplica: la alerta no está sin atender
 }
 
+/** "límite 15 min" (SLA de la severidad); null si el SLA no aplica. */
+export function textoLimiteSla(sla: SlaAlerta): string | null {
+  return sla.estado === null ? null : `límite ${formatoAntiguedad(sla.limiteMin * MIN)}`;
+}
+
+/** "excedido por 2 d 4 h" cuando está fuera de SLA; null en los demás casos. */
+export function textoExcesoSlaLargo(sla: SlaAlerta): string | null {
+  if (sla.estado !== "fuera" || sla.excesoMs === null) return null;
+  return sla.excesoMs < MIN ? "excedido por menos de 1 min" : `excedido por ${formatoAntiguedad(sla.excesoMs)}`;
+}
+
 /** "+2 d 4 h" cuando está fuera de SLA; null en los demás casos. */
 export function textoExcesoSla(sla: SlaAlerta): string | null {
   if (sla.estado !== "fuera" || sla.excesoMs === null) return null;
@@ -59,6 +71,12 @@ export function textoExcesoSla(sla: SlaAlerta): string | null {
 }
 
 // ---------- Antigüedad ----------
+
+/** Tiempo transcurrido desde un evento anterior: "+3 h 20 min"; vacío si no ha pasado nada. */
+export function textoTranscurrido(ms: number): string {
+  if (ms <= 0) return "";
+  return ms < MIN ? "+menos de 1 min" : `+${formatoAntiguedad(ms)}`;
+}
 
 /** "Hace 3 d 4 h", "Hace 45 min", "Hace menos de 1 min". */
 export function etiquetaAntiguedad(ms: number): string {
@@ -78,6 +96,20 @@ const RESOLUCION: Record<string, string> = {
   Duplicated: "Duplicado",
 };
 
+/** Resolución de un caso cerrado (`status`): "Confirmado", "Falso positivo"… Lo desconocido se muestra tal cual. */
+export const etiquetaResolucion = (estado: string): string => RESOLUCION[estado] ?? estado;
+
+/** Etapa del caso: "Abierto", "En progreso", "Cerrado". */
+export const etiquetaEtapaCaso = (etapa: EtapaCaso): string => ETAPA_CASO[etapa];
+
+const ESTADO_TAREA: Record<EstadoTarea, string> = {
+  Waiting: "En espera",
+  InProgress: "En curso",
+  Completed: "Completada",
+  Cancel: "Cancelada",
+};
+export const etiquetaEstadoTarea = (estado: EstadoTarea): string => ESTADO_TAREA[estado];
+
 /**
  * "Sin caso", "#4 · Abierto", "#3 · En progreso", "#2 · Cerrado · Confirmado",
  * "#5 · Cerrado · Falso positivo" o "Caso no disponible" (tiene caseId pero sin datos).
@@ -89,7 +121,7 @@ export function etiquetaCaso(caso: CasoResumen | null): string {
   if (caso.numero !== null) partes.push(`#${caso.numero}`);
   if (caso.etapa !== null) {
     partes.push(ETAPA_CASO[caso.etapa]);
-    if (caso.etapa === "Closed" && caso.estado) partes.push(RESOLUCION[caso.estado] ?? caso.estado);
+    if (caso.etapa === "Closed" && caso.estado) partes.push(etiquetaResolucion(caso.estado));
   }
   return partes.length > 0 ? partes.join(" · ") : "Caso no disponible";
 }

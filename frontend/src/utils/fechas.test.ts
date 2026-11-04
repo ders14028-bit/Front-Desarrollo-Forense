@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diaBogota, diaCorto, etiquetaDia, formatoAntiguedad, formatoHora, ultimosDias } from "./fechas";
+import { diaBogota, diaCorto, etiquetaDia, formatoAntiguedad, formatoFechaHora, formatoHora, ultimosDias } from "./fechas";
 
 // Bogotá es UTC−5 todo el año (sin horario de verano).
 const bogota = (a: number, m: number, d: number, h = 12, min = 0) => Date.UTC(a, m - 1, d, h + 5, min);
@@ -25,6 +25,14 @@ describe("formatoHora", () => {
 
   it("la medianoche es 00:05, no 24:05", () => {
     expect(formatoHora(Date.UTC(2026, 10, 3, 5, 5))).toBe("00:05");
+  });
+});
+
+describe("formatoFechaHora", () => {
+  it("fecha y hora en Bogotá, con año", () => {
+    expect(formatoFechaHora(Date.UTC(2026, 9, 31, 4, 30))).toBe("30 oct 2026, 23:30"); // 04:30 UTC = 23:30 del día anterior
+    expect(formatoFechaHora(Date.UTC(2026, 10, 3, 14, 41))).toBe("3 nov 2026, 09:41");
+    expect(formatoFechaHora(Date.UTC(2027, 0, 1, 5, 0))).toBe("1 ene 2027, 00:00");
   });
 });
 

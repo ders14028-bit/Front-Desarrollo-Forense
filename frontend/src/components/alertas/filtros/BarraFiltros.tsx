@@ -60,7 +60,7 @@ export function BarraFiltros({ filtros, orden, opciones, ahora, onFiltros, onOrd
   }, [limpiezas, retraso]);
 
   // --- Chips ---
-  const chips = useMemo(() => chipsActivos(filtros, ahora), [filtros, ahora]);
+  const chips = useMemo(() => chipsActivos(filtros), [filtros]);
   const quitarChip = (chip: ChipFiltro) => onFiltros(chip.quitar);
   const enfocarBusqueda = useCallback(() => entradaBusqueda.current?.focus(), []);
 
@@ -145,12 +145,7 @@ export function BarraFiltros({ filtros, orden, opciones, ahora, onFiltros, onOrd
         <div className="filtros__grupos">
           <ControlTresEstados titulo="¿Tiene caso?" valor={filtros.tieneCaso} onCambiar={(tieneCaso) => cambiar({ tieneCaso })} />
           <ControlTresEstados titulo="¿Fuera de SLA?" valor={filtros.fueraDeSla} onCambiar={(fueraDeSla) => cambiar({ fueraDeSla })} />
-          <FiltroFecha
-            desde={filtros.desde}
-            hasta={filtros.hasta}
-            ahora={ahora}
-            onCambiar={(desde, hasta) => cambiar({ desde, hasta })}
-          />
+          <FiltroFecha fecha={filtros.fecha} ahora={ahora} onCambiar={(fecha) => cambiar({ fecha })} />
         </div>
       </div>
 
