@@ -53,6 +53,47 @@ describe("ListadoAlertas: con las 40 alertas del mock", () => {
   });
 });
 
+describe("ListadoAlertas: barra de filtros (primer render)", () => {
+  it("búsqueda con etiqueta, selector de orden con las 4 opciones y botón 'Filtros'", async () => {
+    const h = html(await listaMock());
+    expect(h).toContain('type="search"');
+    expect(h).toContain("Buscar por título");
+    for (const opcion of ["Prioridad (recomendado)", "Más recientes", "Más antiguas", "Severidad"]) {
+      expect(h).toContain(`>${opcion}</option>`);
+    }
+    expect(h).toContain('aria-controls="');
+    expect(contar(h, 'class="boton boton--secundario filtros__boton"')).toBe(1);
+  });
+
+  it("los cuatro selectores múltiples empiezan cerrados (aria-expanded=false, sin casillas)", async () => {
+    const h = html(await listaMock());
+    expect(contar(h, 'aria-expanded="false"')).toBeGreaterThanOrEqual(4);
+    for (const titulo of ["Severidad", "Estado", "Herramienta", "Tipo de amenaza"]) {
+      expect(h).toMatch(new RegExp(`selector-multiple__boton[^>]*>${titulo}`));
+    }
+    expect(h).not.toContain('type="checkbox"');
+  });
+
+  it("¿Tiene caso? y ¿Fuera de SLA? con Todos / Sí / No, y la fecha con sus 5 opciones, 'Todos' y '30 días' marcados", async () => {
+    const h = html(await listaMock());
+    expect(h).toContain("¿Tiene caso?");
+    expect(h).toContain("¿Fuera de SLA?");
+    expect(contar(h, 'type="radio"')).toBe(3 + 3 + 5);
+    expect(contar(h, 'checked=""')).toBe(3); // Todos, Todos y 30 días
+    for (const etiqueta of ["Hoy", "7 días", "14 días", "30 días", "Rango"]) {
+      expect(h).toContain(`>${etiqueta}</span>`);
+    }
+    expect(h).not.toContain('type="date"'); // los calendarios solo aparecen con "Rango"
+  });
+
+  it("sin filtros no hay chips ni 'Limpiar filtros', y el botón es solo 'Filtros'", async () => {
+    const h = html(await listaMock());
+    expect(h).not.toContain("Filtros activos");
+    expect(h).not.toContain("Limpiar filtros");
+    expect(h).toMatch(/filtros__boton"[^>]*>Filtros</);
+  });
+});
+
 describe("ListadoAlertas: casos especiales", () => {
   const base: ListaAlertas = { generadoEn: AHORA, total: 0, truncado: false, datosDeLaboratorio: false, alertas: [] };
 

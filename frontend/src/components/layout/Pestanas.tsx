@@ -14,6 +14,7 @@ interface Props {
 /** Pestañas accesibles (patrón WAI-ARIA): flechas, Inicio y Fin cambian de pestaña. */
 export function Pestanas({ pestanas, activa, onCambiar }: Props) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const interior = useRef<HTMLDivElement>(null);
 
   function alPresionar(e: KeyboardEvent<HTMLButtonElement>, indice: number) {
     let destino: number | null = null;
@@ -31,7 +32,14 @@ export function Pestanas({ pestanas, activa, onCambiar }: Props) {
 
   return (
     <div className="pestanas">
-      <div className="pestanas__interior ancho" role="tablist" aria-label="Vistas del dashboard">
+      <div
+        ref={interior}
+        className="pestanas__interior ancho"
+        role="tablist"
+        aria-label="Vistas del dashboard"
+        onPointerDownCapture={() => interior.current?.setAttribute("data-puntero", "")}
+        onKeyDownCapture={() => interior.current?.removeAttribute("data-puntero")}
+      >
         {pestanas.map((p, i) => {
           const seleccionada = p.id === activa;
           return (

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { AlertaFila } from "../types/listaAlertas";
 import {
+  ajustarRango,
   calcularVista,
   conFiltros,
   conOrden,
   conPagina,
+  contarFiltrosActivos,
   ESTADO_TABLA_INICIAL,
   FILTROS_VACIOS,
   filtrarAlertas,
@@ -12,6 +14,7 @@ import {
   normalizarTexto,
   ordenarAlertas,
   paginar,
+  presetActivo,
   rangoPreset,
   textoMostrando,
   type FiltrosTabla,
@@ -205,6 +208,68 @@ describe("rangoPreset", () => {
     expect(rangoPreset(7, AHORA)).toEqual({ desde: "2026-10-28", hasta: "2026-11-03" });
     expect(rangoPreset(14, AHORA)).toEqual({ desde: "2026-10-21", hasta: "2026-11-03" });
     expect(rangoPreset(30, AHORA)).toEqual({ desde: "2026-10-05", hasta: "2026-11-03" });
+  });
+});
+
+describe("presetActivo", () => {
+  it("sin fechas: 30 días (toda la ventana)", () => {
+    expect(presetActivo({ desde: null, hasta: null }, AHORA)).toBe(30);
+  });
+
+  it("reconoce hoy, 7 y 14 días", () => {
+    expect(presetActivo({ desde: "2026-11-03", hasta: "2026-11-03" }, AHORA)).toBe("hoy");
+    expect(presetActivo({ desde: "2026-10-28", hasta: "2026-11-03" }, AHORA)).toBe(7);
+    expect(presetActivo({ desde: "2026-10-21", hasta: "2026-11-03" }, AHORA)).toBe(14);
+  });
+
+  it("cualquier otro rango es 'rango' (incluso las fechas explícitas de toda la ventana)", () => {
+    expect(presetActivo({ desde: "2026-10-30", hasta: "2026-11-01" }, AHORA)).toBe("rango");
+    expect(presetActivo({ desde: "2026-10-28", hasta: null }, AHORA)).toBe("rango");
+    expect(presetActivo({ desde: null, hasta: "2026-11-03" }, AHORA)).toBe("rango");
+    expect(presetActivo({ desde: "2026-10-05", hasta: "2026-11-03" }, AHORA)).toBe("rango");
+  });
+
+  it("un preset de ayer ya no coincide hoy (pasa a 'rango' con sus fechas)", () => {
+    const manana = AHORA + 86_400_000;
+    expect(presetActivo({ desde: "2026-10-28", hasta: "2026-11-03" }, manana)).toBe("rango");
+  });
+});
+
+describe("ajustarRango", () => {
+  it("un rango válido se acepta tal cual", () => {
+    expect(ajustarRango("2026-10-01", "2026-10-10", "desde", "2026-10-05")).toEqual({ desde: "2026-10-05", hasta: "2026-10-10" });
+    expect(ajustarRango("2026-10-01", "2026-10-10", "hasta", "2026-10-20")).toEqual({ desde: "2026-10-01", hasta: "2026-10-20" });
+  });
+
+  it("'desde' no puede quedar después de 'hasta': 'hasta' se iguala", () => {
+    expect(ajustarRango("2026-10-01", "2026-10-10", "desde", "2026-10-15")).toEqual({ desde: "2026-10-15", hasta: "2026-10-15" });
+  });
+
+  it("'hasta' no puede quedar antes de 'desde': 'desde' se iguala", () => {
+    expect(ajustarRango("2026-10-05", "2026-10-10", "hasta", "2026-10-01")).toEqual({ desde: "2026-10-01", hasta: "2026-10-01" });
+  });
+
+  it("el mismo día en los dos extremos es válido", () => {
+    expect(ajustarRango("2026-10-05", "2026-10-10", "hasta", "2026-10-05")).toEqual({ desde: "2026-10-05", hasta: "2026-10-05" });
+  });
+
+  it("borrar un extremo (null) o editar con el otro vacío no toca nada más", () => {
+    expect(ajustarRango("2026-10-05", "2026-10-10", "desde", null)).toEqual({ desde: null, hasta: "2026-10-10" });
+    expect(ajustarRango(null, "2026-10-10", "desde", "2026-10-20")).toEqual({ desde: "2026-10-20", hasta: "2026-10-20" });
+    expect(ajustarRango("2026-10-05", null, "hasta", "2026-10-01")).toEqual({ desde: "2026-10-01", hasta: "2026-10-01" });
+    expect(ajustarRango(null, null, "hasta", "2026-10-01")).toEqual({ desde: null, hasta: "2026-10-01" });
+  });
+});
+
+describe("contarFiltrosActivos (para 'Filtros (N)')", () => {
+  it("cuenta grupos, no valores, y no cuenta la búsqueda", () => {
+    expect(contarFiltrosActivos(FILTROS_VACIOS)).toBe(0);
+    expect(contarFiltrosActivos(filtros({ busqueda: "algo" }))).toBe(0);
+    expect(contarFiltrosActivos(filtros({ severidades: [4, 3, 2] }))).toBe(1);
+    expect(contarFiltrosActivos(filtros({ severidades: [4], estados: ["New"], tipos: [null], origenes: ["wazuh"] }))).toBe(4);
+    expect(contarFiltrosActivos(filtros({ tieneCaso: "si", fueraDeSla: "no" }))).toBe(2);
+    expect(contarFiltrosActivos(filtros({ desde: "2026-10-01", hasta: "2026-10-02" }))).toBe(1); // el rango es un solo filtro
+    expect(contarFiltrosActivos(filtros({ hasta: "2026-10-02" }))).toBe(1);
   });
 });
 

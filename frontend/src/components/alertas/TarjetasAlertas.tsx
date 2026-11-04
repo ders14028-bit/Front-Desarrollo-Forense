@@ -1,12 +1,7 @@
 import type { AlertaFila } from "../../types/listaAlertas";
-import {
-  etiquetaAntiguedad,
-  etiquetaCaso,
-  etiquetaEstadoAlerta,
-  etiquetaOrigen,
-  etiquetaTipo,
-} from "../../utils/etiquetas";
+import { etiquetaAntiguedad, etiquetaCaso, etiquetaEstadoAlerta } from "../../utils/etiquetas";
 import { InsigniaSeveridad } from "./InsigniaSeveridad";
+import { OrigenYTipo } from "./OrigenYTipo";
 import { TextoSla } from "./TextoSla";
 
 interface Props {
@@ -28,7 +23,7 @@ export function TarjetasAlertas({ filas, onAbrir }: Props) {
             </span>
             <span className="tarjeta-alerta__titulo">{f.titulo}</span>
             <span className="tarjeta-alerta__sub">
-              {etiquetaOrigen(f.origen)} · {etiquetaTipo(f.tipo)}
+              <OrigenYTipo origen={f.origen} tipo={f.tipo} />
             </span>
             <span className="tarjeta-alerta__dato">{etiquetaAntiguedad(f.antiguedadMs)}</span>
             <span className="tarjeta-alerta__dato">

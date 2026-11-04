@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { VENTANA_ALERTAS_DIAS } from "../../config";
 import type { ListaAlertas } from "../../types/listaAlertas";
+import { calcularOpciones } from "../../utils/filtros";
 import {
   calcularVista,
   conFiltros,
+  conOrden,
   conPagina,
   ESTADO_TABLA_INICIAL,
   FILTROS_VACIOS,
   hayFiltrosActivos,
   type EstadoTabla,
+  type FiltrosTabla,
+  type Orden,
 } from "../../utils/tabla";
 import { NotaLaboratorio } from "../ui/NotaLaboratorio";
+import { BarraFiltros } from "./filtros/BarraFiltros";
 import { Paginacion } from "./Paginacion";
 import { TablaAlertas } from "./TablaAlertas";
 import { TarjetasAlertas } from "./TarjetasAlertas";
@@ -21,12 +26,14 @@ interface Props {
   onAbrir?: (id: string) => void;
 }
 
-/** Cabecera, tabla (escritorio) o tarjetas (celular), paginación y estados vacíos de las alertas. */
+/** Cabecera, filtros, tabla (escritorio) o tarjetas (celular), paginación y estados vacíos de las alertas. */
 export function ListadoAlertas({ lista, onAbrir }: Props) {
   const [estado, setEstado] = useState<EstadoTabla>(ESTADO_TABLA_INICIAL);
+  const [limpiezas, setLimpiezas] = useState(0);
   const raiz = useRef<HTMLElement>(null);
 
   const vista = useMemo(() => calcularVista(lista.alertas, estado), [lista.alertas, estado]);
+  const opciones = useMemo(() => calcularOpciones(lista.alertas, estado.filtros), [lista.alertas, estado.filtros]);
   const { pagina } = vista;
 
   // Si tras un refresco la lista se achicó y la página pedida ya no existe, `calcularVista` ya muestra
@@ -40,7 +47,18 @@ export function ListadoAlertas({ lista, onAbrir }: Props) {
     raiz.current?.scrollIntoView({ block: "start" });
   };
 
-  const limpiarFiltros = () => setEstado((e) => conFiltros(e, FILTROS_VACIOS));
+  // Cambiar un filtro vuelve a la página 1. Si la función devuelve el mismo objeto, no hay cambio.
+  const cambiarFiltros = useCallback((cambio: (actuales: FiltrosTabla) => FiltrosTabla) => {
+    setEstado((e) => {
+      const nuevos = cambio(e.filtros);
+      return nuevos === e.filtros ? e : conFiltros(e, nuevos);
+    });
+  }, []);
+  const cambiarOrden = useCallback((orden: Orden) => setEstado((e) => (e.orden === orden ? e : conOrden(e, orden))), []);
+  const limpiarFiltros = useCallback(() => {
+    setEstado((e) => conFiltros(e, FILTROS_VACIOS));
+    setLimpiezas((n) => n + 1);
+  }, []);
 
   const sinAlertas = lista.alertas.length === 0;
   const sinCoincidencias = !sinAlertas && vista.coincidencias === 0;
@@ -68,7 +86,20 @@ export function ListadoAlertas({ lista, onAbrir }: Props) {
         </p>
       )}
 
-      {sinAlertas && <p className="marcador">No hay alertas en los últimos {VENTANA_ALERTAS_DIAS} días</p>}
+      {sinAlertas ? (
+        <p className="marcador">No hay alertas en los últimos {VENTANA_ALERTAS_DIAS} días</p>
+      ) : (
+        <BarraFiltros
+          filtros={estado.filtros}
+          orden={estado.orden}
+          opciones={opciones}
+          ahora={lista.generadoEn}
+          onFiltros={cambiarFiltros}
+          onOrden={cambiarOrden}
+          onLimpiar={limpiarFiltros}
+          limpiezas={limpiezas}
+        />
+      )}
 
       {sinCoincidencias && (
         <div className="marcador">

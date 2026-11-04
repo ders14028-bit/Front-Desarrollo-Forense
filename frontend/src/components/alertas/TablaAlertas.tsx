@@ -1,7 +1,8 @@
 import type { AlertaFila } from "../../types/listaAlertas";
-import { etiquetaCaso, etiquetaEstadoAlerta, etiquetaOrigen, etiquetaTipo } from "../../utils/etiquetas";
+import { etiquetaCaso, etiquetaEstadoAlerta } from "../../utils/etiquetas";
 import { formatoAntiguedad } from "../../utils/fechas";
 import { InsigniaSeveridad } from "./InsigniaSeveridad";
+import { OrigenYTipo } from "./OrigenYTipo";
 import { TextoSla } from "./TextoSla";
 
 interface Props {
@@ -39,7 +40,7 @@ export function TablaAlertas({ filas, descripcion, onAbrir }: Props) {
                   {f.titulo}
                 </button>
                 <span className="fila-sub">
-                  {etiquetaOrigen(f.origen)} · {etiquetaTipo(f.tipo)}
+                  <OrigenYTipo origen={f.origen} tipo={f.tipo} />
                 </span>
               </th>
               <td>{etiquetaEstadoAlerta(f.estado)}</td>

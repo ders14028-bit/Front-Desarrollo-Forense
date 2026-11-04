@@ -125,22 +125,29 @@ body {
   padding-top: var(--espacio-2);
 }
 
+/* La pestaña activa se marca SOLO con la línea inferior: sin recuadro, sin cambio de color ni de peso. */
 .pestana {
+  margin-bottom: -1px; /* la línea de la pestaña tapa la del contenedor */
   padding: var(--espacio-2) var(--espacio-4);
   font: inherit;
-  color: var(--texto-suave);
+  color: var(--texto);
   background: transparent;
-  border: 1px solid transparent;
-  border-bottom: 2px solid transparent;
-  border-radius: var(--radio) var(--radio) 0 0;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .pestana:hover {
-  color: var(--texto);
+  border-bottom-color: var(--borde);
 }
 
-/* El anillo de foco solo aparece al navegar con teclado, no tras un clic con el mouse. */
+.pestana[aria-selected="true"] {
+  border-bottom-color: var(--acento);
+}
+
+/* El anillo de foco solo aparece al navegar con teclado (:focus-visible), no tras un clic. */
 .pestana:focus:not(:focus-visible) {
   outline: none;
 }
@@ -150,10 +157,12 @@ body {
   outline-offset: -2px;
 }
 
-.pestana[aria-selected="true"] {
-  color: var(--texto);
-  font-weight: 600;
-  border-bottom-color: var(--acento);
+/*
+ * Respaldo: si el último gesto fue con el mouse (marcado desde Pestanas.tsx), no hay anillo aunque el
+ * navegador considere visible el foco (p. ej. cuando la pestaña ya tenía el foco por teclado).
+ */
+.pestanas__interior[data-puntero] .pestana:focus {
+  outline: none;
 }
 
 /* ---------- Contenido ---------- */
@@ -647,9 +656,15 @@ body {
   color: var(--ok);
 }
 
+/* Solo "Fuera de SLA" va en rojo; el exceso es un dato secundario, en gris. */
 .sla__exceso {
   margin-left: 0.35em;
   font-weight: 400;
+  color: var(--texto-suave);
+}
+
+.sin-clasificar {
+  color: var(--texto-suave);
 }
 
 /* Tabla (escritorio) y tarjetas (celular) */
@@ -711,12 +726,14 @@ body {
   cursor: default; /* todavía no abre nada: el panel de detalle llega en un paso posterior */
 }
 
+/* "Herramienta · Tipo": en color normal; solo "Sin clasificar" va en gris (igual que en la gráfica). */
 .fila-sub,
 .tarjeta-alerta__sub {
   display: block;
   margin-top: 2px;
   font-size: 0.8125rem;
-  color: var(--texto-suave);
+  font-weight: 400;
+  color: var(--texto);
 }
 
 .tarjetas-alertas {
@@ -822,4 +839,294 @@ body {
 .esqueleto--fila {
   height: 56px;
   border-radius: var(--radio);
+}
+
+/* ---------- Filtros de la lista de alertas ---------- */
+.filtros {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-4);
+}
+
+.filtros__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.filtros__busqueda {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.filtros__orden {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8125rem;
+  color: var(--texto-suave);
+}
+
+.campo {
+  min-height: 40px;
+  padding: var(--espacio-2) var(--espacio-3);
+  font: inherit;
+  color: var(--texto);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.filtros__busqueda .campo {
+  width: 100%;
+}
+
+/* El botón "Filtros (N)" solo existe en pantallas angostas; en anchas el panel está siempre a la vista. */
+.filtros__boton {
+  display: none;
+  min-height: 40px;
+}
+
+.filtros__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.filtros__selectores,
+.filtros__grupos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2) var(--espacio-6);
+}
+
+.filtros__selectores {
+  gap: var(--espacio-2);
+}
+
+.filtros__grupos {
+  align-items: flex-start;
+}
+
+@media (max-width: 719.98px) {
+  .filtros__busqueda {
+    flex-basis: 100%;
+  }
+
+  .filtros__boton {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .filtros__panel {
+    display: none;
+    padding: var(--espacio-3);
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+  }
+
+  .filtros__panel--abierto {
+    display: flex;
+  }
+}
+
+/* Selector de selección múltiple */
+.selector-multiple {
+  position: relative;
+}
+
+.selector-multiple__boton {
+  min-height: 40px;
+}
+
+.selector-multiple__boton--activo {
+  font-weight: 600;
+  border-color: var(--acento);
+}
+
+.selector-multiple__lista {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 14rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: var(--espacio-2);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
+}
+
+@media (max-width: 719.98px) {
+  /* En el panel del celular la lista se abre en el flujo de la página, sin flotar. */
+  .selector-multiple__lista {
+    position: static;
+    min-width: 0;
+    max-height: 14rem;
+    margin-top: var(--espacio-1);
+    box-shadow: none;
+  }
+}
+
+.selector-multiple__opcion {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: 6px var(--espacio-1);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.selector-multiple__opcion input {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--acento);
+}
+
+.selector-multiple__vacio {
+  margin: 0;
+  padding: var(--espacio-1);
+  font-size: 0.875rem;
+  color: var(--texto-suave);
+}
+
+/* Grupos de opciones excluyentes (Todos / Sí / No, fecha) */
+.grupo-opciones {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grupo-opciones__titulo {
+  padding: 0;
+  margin-bottom: var(--espacio-1);
+  font-size: 0.8125rem;
+  color: var(--texto-suave);
+}
+
+.segmentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.segmento {
+  position: relative;
+  cursor: pointer;
+}
+
+/* La casilla de opción queda oculta a la vista pero sigue siendo enfocable y operable con teclado. */
+.segmento__entrada {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.segmento__texto {
+  display: inline-block;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+}
+
+.segmento:hover .segmento__texto {
+  border-color: var(--acento);
+}
+
+.segmento__entrada:checked + .segmento__texto {
+  font-weight: 600;
+  color: var(--acento-texto);
+  background: var(--acento);
+  border-color: var(--acento);
+}
+
+.segmento__entrada:focus-visible + .segmento__texto {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+.rango-fechas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-2);
+}
+
+.rango-fechas__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8125rem;
+  color: var(--texto-suave);
+}
+
+/* Chips de filtros activos */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.chips__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 3px 2px 10px;
+  font-size: 0.8125rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+}
+
+.chip__quitar {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--texto-suave);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.chip__quitar:hover {
+  color: var(--texto);
+  background: var(--pista);
+}
+
+.chips__limpiar {
+  padding: var(--espacio-1) var(--espacio-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--acento);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
 }

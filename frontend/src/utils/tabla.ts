@@ -100,6 +100,50 @@ export function rangoPreset(preset: PresetFecha, ahora: number): { desde: string
   return { desde: dias[0], hasta: dias[dias.length - 1] };
 }
 
+export type PresetActivo = PresetFecha | "rango";
+
+/**
+ * Qué opción de fecha representa el rango actual: sin fechas = 30 (toda la ventana); si coincide
+ * con "Hoy", 7 o 14 días, ese preset; cualquier otra cosa, "rango".
+ */
+export function presetActivo(f: Pick<FiltrosTabla, "desde" | "hasta">, ahora: number): PresetActivo {
+  if (f.desde === null && f.hasta === null) return 30;
+  for (const preset of ["hoy", 7, 14] as const) {
+    const r = rangoPreset(preset, ahora);
+    if (f.desde === r.desde && f.hasta === r.hasta) return preset;
+  }
+  return "rango";
+}
+
+/**
+ * Aplica el cambio de un extremo del rango sin permitir que "desde" quede después de "hasta":
+ * si el valor nuevo los invertiría, el otro extremo se iguala al nuevo. null = sin límite.
+ */
+export function ajustarRango(
+  desde: string | null,
+  hasta: string | null,
+  editado: "desde" | "hasta",
+  valor: string | null,
+): { desde: string | null; hasta: string | null } {
+  if (editado === "desde") {
+    return { desde: valor, hasta: valor !== null && hasta !== null && valor > hasta ? valor : hasta };
+  }
+  return { desde: valor !== null && desde !== null && valor < desde ? valor : desde, hasta: valor };
+}
+
+/** Cuántos grupos de filtros hay activos (la búsqueda no cuenta: siempre está a la vista). Para "Filtros (N)". */
+export function contarFiltrosActivos(f: FiltrosTabla): number {
+  return [
+    f.severidades.length > 0,
+    f.estados.length > 0,
+    f.origenes.length > 0,
+    f.tipos.length > 0,
+    f.tieneCaso !== "todos",
+    f.fueraDeSla !== "todos",
+    f.desde !== null || f.hasta !== null,
+  ].filter(Boolean).length;
+}
+
 // ---------- Orden ----------
 
 export type Orden = "prioridad" | "recientes" | "antiguas" | "severidad";
