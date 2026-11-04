@@ -8,6 +8,7 @@ import {
   ESTADO_TABLA_INICIAL,
   FILTROS_VACIOS,
   filtrarAlertas,
+  hayFiltrosActivos,
   normalizarTexto,
   ordenarAlertas,
   paginar,
@@ -167,6 +168,25 @@ describe("filtrarAlertas: fecha (días de Bogotá, inclusiva en los dos extremos
   });
 });
 
+describe("hayFiltrosActivos", () => {
+  it("sin filtros, o con una búsqueda de solo espacios, no hay filtros activos", () => {
+    expect(hayFiltrosActivos(FILTROS_VACIOS)).toBe(false);
+    expect(hayFiltrosActivos(filtros({ busqueda: "   " }))).toBe(false);
+  });
+
+  it("cualquier filtro aplicado cuenta", () => {
+    expect(hayFiltrosActivos(filtros({ busqueda: "x" }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ severidades: [4] }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ estados: ["New"] }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ origenes: ["wazuh"] }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ tipos: [null] }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ tieneCaso: "no" }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ fueraDeSla: "si" }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ desde: "2026-11-01" }))).toBe(true);
+    expect(hayFiltrosActivos(filtros({ hasta: "2026-11-01" }))).toBe(true);
+  });
+});
+
 describe("rangoPreset", () => {
   it("'Hoy' va desde las 00:00 de Bogotá de hoy: un solo día", () => {
     expect(rangoPreset("hoy", AHORA)).toEqual({ desde: "2026-11-03", hasta: "2026-11-03" });
@@ -234,10 +254,18 @@ describe("ordenarAlertas: recientes, antiguas y severidad (con desempate por id)
     expect(ids(ordenarAlertas(TODAS, "antiguas"))).toEqual(["5", "1", "4", "3", "6", "2"]);
   });
 
-  it("severidad de mayor a menor; a igualdad, por id", () => {
-    // sev 4: F1 y F6 · sev 3: F2 y F3 · sev 2: F4 · sev 1: F5
-    expect(ids(ordenarAlertas(TODAS, "severidad"))).toEqual(["1", "6", "2", "3", "4", "5"]);
-    expect(ids(ordenarAlertas([...TODAS].reverse(), "severidad"))).toEqual(["1", "6", "2", "3", "4", "5"]);
+  it("severidad de mayor a menor; a igualdad, la más antigua primero", () => {
+    // sev 4: F1 (30 oct) y F6 (2 nov) · sev 3: F3 (1 nov) y F2 (3 nov) · sev 2: F4 · sev 1: F5
+    expect(ids(ordenarAlertas(TODAS, "severidad"))).toEqual(["1", "6", "3", "2", "4", "5"]);
+    expect(ids(ordenarAlertas([...TODAS].reverse(), "severidad"))).toEqual(["1", "6", "3", "2", "4", "5"]);
+  });
+
+  it("severidad: con misma severidad y misma fecha, desempata por id", () => {
+    const p = fila({ id: "~2", severidad: 3, creadaEn: 500 });
+    const q = fila({ id: "~10", severidad: 3, creadaEn: 500 });
+    const r = fila({ id: "~5", severidad: 3, creadaEn: 100 }); // más antigua: va primero
+    expect(ids(ordenarAlertas([p, q, r], "severidad"))).toEqual(["~5", "~10", "~2"]);
+    expect(ids(ordenarAlertas([r, q, p], "severidad"))).toEqual(["~5", "~10", "~2"]);
   });
 
   it("con la misma fecha, recientes y antiguas desempatan por id (ascendente en ambos)", () => {

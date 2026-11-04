@@ -552,11 +552,274 @@ body {
   filter: brightness(1.1);
 }
 
+.boton--secundario {
+  color: var(--texto);
+  background: transparent;
+  border: 1px solid var(--borde);
+}
+
 .marcador {
   padding: var(--espacio-6);
   text-align: center;
   color: var(--texto-suave);
   background: var(--superficie);
   border: 1px dashed var(--borde);
+  border-radius: var(--radio);
+}
+
+.marcador p {
+  margin: 0 0 var(--espacio-3);
+}
+
+.marcador p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Lista de alertas ---------- */
+.sev-4 {
+  --sev-color: var(--sev-critica);
+}
+.sev-3 {
+  --sev-color: var(--sev-alta);
+}
+.sev-2 {
+  --sev-color: var(--sev-media);
+}
+.sev-1 {
+  --sev-color: var(--sev-baja);
+}
+
+.lista-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espacio-1) var(--espacio-3);
+  margin-bottom: var(--espacio-3);
+}
+
+.lista-cabecera .seccion__titulo {
+  margin: 0;
+}
+
+.lista-cabecera__resumen {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.lista-nota {
+  margin: calc(var(--espacio-2) * -1) 0 var(--espacio-3);
+}
+
+.lista-aviso {
+  margin: 0 0 var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-3);
+  font-size: 0.875rem;
+  color: var(--texto);
+  border-left: 4px solid var(--aviso);
+  background: var(--superficie);
+  border-radius: 0 var(--radio) var(--radio) 0;
+}
+
+/* Insignia de severidad: banda de color + texto */
+.sev {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sev__banda {
+  flex: none;
+  width: 4px;
+  height: 1.25em;
+  background: var(--sev-color);
+  border-radius: 2px;
+}
+
+/* SLA */
+.sla--fuera {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.sla--dentro {
+  color: var(--ok);
+}
+
+.sla__exceso {
+  margin-left: 0.35em;
+  font-weight: 400;
+}
+
+/* Tabla (escritorio) y tarjetas (celular) */
+.tabla-contenedor {
+  overflow-x: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.tabla-alertas {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tabla-alertas th,
+.tabla-alertas td {
+  padding: var(--espacio-3);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tabla-alertas thead th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+
+.tabla-alertas tbody tr + tr {
+  border-top: 1px solid var(--borde);
+}
+
+.tabla-alertas tbody th {
+  font-weight: 400;
+}
+
+.tabla-alertas .celda-titulo {
+  min-width: 240px;
+}
+
+.tabla-alertas .sla__exceso {
+  display: block;
+  margin-left: 0;
+}
+
+.fila-boton {
+  display: block;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.35;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: default; /* todavía no abre nada: el panel de detalle llega en un paso posterior */
+}
+
+.fila-sub,
+.tarjeta-alerta__sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--texto-suave);
+}
+
+.tarjetas-alertas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarjeta-alerta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  width: 100%;
+  padding: var(--espacio-3);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--sev-color);
+  border-radius: var(--radio);
+  cursor: default;
+}
+
+.tarjeta-alerta__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-1) var(--espacio-3);
+  font-size: 0.8125rem;
+}
+
+.tarjeta-alerta__estado {
+  color: var(--texto-suave);
+}
+
+.tarjeta-alerta__titulo {
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta-alerta__dato {
+  font-size: 0.8125rem;
+}
+
+/* Solo uno de los dos se ve: tabla desde 720 px, tarjetas por debajo */
+@media (max-width: 719.98px) {
+  .tabla-contenedor {
+    display: none;
+  }
+}
+
+@media (min-width: 720px) {
+  .tarjetas-alertas {
+    display: none;
+  }
+}
+
+/* Paginación */
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2) var(--espacio-4);
+  margin-top: var(--espacio-4);
+}
+
+.paginacion__texto {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--texto-suave);
+}
+
+.paginacion__botones {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.paginacion__pagina {
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.paginacion__hueco {
+  display: inline-block;
+  min-width: 6.5rem; /* mantiene el centro en su sitio cuando falta Anterior o Siguiente */
+}
+
+/* Esqueleto de la lista */
+.lista-esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.esqueleto--fila {
+  height: 56px;
   border-radius: var(--radio);
 }

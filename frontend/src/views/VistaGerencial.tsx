@@ -1,10 +1,10 @@
 import { GraficaEsqueleto } from "../components/graficas/TarjetaGrafica";
-import { AvisoError } from "../components/ui/AvisoError";
+import { BloqueCarga } from "../components/ui/BloqueCarga";
 import { NotaLaboratorio } from "../components/ui/NotaLaboratorio";
 import { TarjetaEsqueleto, TarjetaMetrica } from "../components/ui/TarjetaMetrica";
 import type { ResultadoResumen } from "../hooks/useResumen";
 import type { ResumenGerencial } from "../types/metricas";
-import { formatoAntiguedad, formatoHora } from "../utils/fechas";
+import { formatoAntiguedad } from "../utils/fechas";
 import { SeccionGraficas } from "./SeccionGraficas";
 
 const porcentaje = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 });
@@ -127,27 +127,15 @@ function Esqueleto() {
 }
 
 export function VistaGerencial({ resumen }: { resumen: ResultadoResumen }) {
-  const { datos, cargando, error, actualizadoEn, reintentar } = resumen;
-
-  if (datos === null) {
-    if (error !== null && !cargando) {
-      return <AvisoError titulo="No se pudieron cargar los datos" detalle={error.message} onReintentar={reintentar} />;
-    }
-    return <Esqueleto />;
-  }
-
   return (
-    <>
-      {error !== null && (
-        <AvisoError
-          rol="status"
-          titulo={`No se pudo actualizar. Mostrando datos de las ${actualizadoEn === null ? "—" : formatoHora(actualizadoEn)}`}
-          detalle={error.message}
-        />
+    <BloqueCarga resultado={resumen} esqueleto={<Esqueleto />}>
+      {(datos) => (
+        <>
+          <SeccionAlertas resumen={datos} />
+          <SeccionCasos resumen={datos} />
+          <SeccionGraficas resumen={datos} />
+        </>
       )}
-      <SeccionAlertas resumen={datos} />
-      <SeccionCasos resumen={datos} />
-      <SeccionGraficas resumen={datos} />
-    </>
+    </BloqueCarga>
   );
 }

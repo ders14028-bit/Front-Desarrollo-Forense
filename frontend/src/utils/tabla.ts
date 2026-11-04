@@ -39,6 +39,21 @@ export const FILTROS_VACIOS: FiltrosTabla = {
   hasta: null,
 };
 
+/** ¿Hay algún filtro aplicado? (una búsqueda de solo espacios no cuenta). */
+export function hayFiltrosActivos(f: FiltrosTabla): boolean {
+  return (
+    normalizarTexto(f.busqueda) !== "" ||
+    f.severidades.length > 0 ||
+    f.estados.length > 0 ||
+    f.origenes.length > 0 ||
+    f.tipos.length > 0 ||
+    f.tieneCaso !== "todos" ||
+    f.fueraDeSla !== "todos" ||
+    f.desde !== null ||
+    f.hasta !== null
+  );
+}
+
 /** Minúsculas, sin tildes ni diacríticos y sin espacios en los extremos. */
 export function normalizarTexto(texto: string): string {
   return texto
@@ -117,7 +132,8 @@ const COMPARADORES: Record<Orden, (a: AlertaFila, b: AlertaFila) => number> = {
     porId(a, b),
   recientes: (a, b) => b.creadaEn - a.creadaEn || porId(a, b),
   antiguas: (a, b) => a.creadaEn - b.creadaEn || porId(a, b),
-  severidad: (a, b) => b.severidad - a.severidad || porId(a, b),
+  // severidad (mayor primero) → la más antigua primero → id
+  severidad: (a, b) => b.severidad - a.severidad || a.creadaEn - b.creadaEn || porId(a, b),
 };
 
 /** Devuelve una copia ordenada. Todos los órdenes desempatan por id, así el orden no salta entre refrescos. */
