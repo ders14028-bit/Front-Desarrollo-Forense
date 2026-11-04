@@ -23,8 +23,10 @@ React (frontend/)  →  Spring Boot (backend/)  →  TheHive API (/api/v1/query)
 
 - **Contrato de `src/api/`**: expone `obtenerResumenGerencial()` y `listarAlertas(filtros)`.
   El backend devolverá métricas YA AGREGADAS; el frontend no recalcula contra TheHive.
-- **Mocks**: `src/mocks/generar.ts` genera los datos crudos con fechas RELATIVAS a hoy (nunca
-  timestamps fijos). ~40 alertas en 30 días con forma idéntica a TheHive; ~6 casos y tareas.
+- **Mocks**: se generan AL CARGAR LA APP (módulos en `src/mocks/`), con un generador de
+  números pseudoaleatorios de SEMILLA FIJA y fechas relativas a `Date.now()`: así salen siempre
+  iguales en forma y nunca quedan viejos. No hay script que escriba JSON estático ni timestamps
+  fijos. ~40 alertas en 30 días con forma idéntica a TheHive; ~6 casos y tareas.
   Todo mock es ficticio y debe estar marcado como tal.
 - `src/api/mock.ts` calcula los agregados desde los mocks crudos con las funciones puras de
   `src/utils/metricas.ts`, devolviendo la misma forma que dará el backend.

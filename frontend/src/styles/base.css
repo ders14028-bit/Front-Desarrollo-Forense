@@ -1,0 +1,127 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: var(--fuente);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+/* ---------- Encabezado ---------- */
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2) var(--espacio-4);
+  padding: var(--espacio-3) var(--espacio-4);
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.encabezado__titulo {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--espacio-1) var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  color: var(--texto-suave);
+}
+
+.estado__item {
+  white-space: nowrap; /* cada dato se mantiene entero; baja de línea como bloque */
+}
+
+.estado__conexion {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.estado__punto {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+@media (max-width: 600px) {
+  .estado {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
+
+/* ---------- Pestañas ---------- */
+.pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1);
+  padding: var(--espacio-2) var(--espacio-4) 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.pestana {
+  padding: var(--espacio-2) var(--espacio-4);
+  font: inherit;
+  color: var(--texto-suave);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radio) var(--radio) 0 0;
+  cursor: pointer;
+}
+
+.pestana:hover {
+  color: var(--texto);
+}
+
+.pestana[aria-selected="true"] {
+  color: var(--texto);
+  font-weight: 600;
+  border-bottom-color: var(--acento);
+}
+
+/* ---------- Contenido ---------- */
+.contenido {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--espacio-4);
+}
+
+.marcador {
+  padding: var(--espacio-6);
+  text-align: center;
+  color: var(--texto-suave);
+  background: var(--superficie);
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio);
+}
