@@ -11,7 +11,11 @@
   --acento: #1f5fbf;
   --acento-texto: #ffffff;
   --ok: #1a7f4b;
+  --error: #b3261e;
+  --error-fondo: #fdecea;
+  --aviso: #8a5a00;
   --foco: #1f5fbf;
+  --esqueleto: #e3e6eb;
 
   --espacio-1: 0.25rem;
   --espacio-2: 0.5rem;
@@ -31,6 +35,10 @@
     --acento: #6ea3ff;
     --acento-texto: #0d1420;
     --ok: #4cc58a;
+    --error: #ff8a80;
+    --error-fondo: #3a1f1d;
+    --aviso: #f2b84b;
     --foco: #6ea3ff;
+    --esqueleto: #2a3040;
   }
 }

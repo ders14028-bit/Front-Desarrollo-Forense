@@ -17,6 +17,18 @@ export function diaBogota(ms: number): string {
   return `${valor("year")}-${valor("month")}-${valor("day")}`;
 }
 
+const formateadorHora = new Intl.DateTimeFormat("en-GB", {
+  timeZone: ZONA_HORARIA,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** Hora de un timestamp en Bogotá, `HH:MM` (24 h). */
+export function formatoHora(ms: number): string {
+  return formateadorHora.format(new Date(ms));
+}
+
 /** Los `n` días (`YYYY-MM-DD`, del más antiguo al más reciente) que terminan hoy en Bogotá. */
 export function ultimosDias(n: number, ahora: number = Date.now()): string[] {
   const [a, m, d] = diaBogota(ahora).split("-").map(Number);

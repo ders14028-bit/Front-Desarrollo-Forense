@@ -30,29 +30,31 @@ export function Pestanas({ pestanas, activa, onCambiar }: Props) {
   }
 
   return (
-    <div className="pestanas" role="tablist" aria-label="Vistas del dashboard">
-      {pestanas.map((p, i) => {
-        const seleccionada = p.id === activa;
-        return (
-          <button
-            key={p.id}
-            ref={(el) => {
-              refs.current[p.id] = el;
-            }}
-            type="button"
-            role="tab"
-            id={`pestana-${p.id}`}
-            aria-selected={seleccionada}
-            aria-controls={`panel-${p.id}`}
-            tabIndex={seleccionada ? 0 : -1}
-            className="pestana"
-            onClick={() => onCambiar(p.id)}
-            onKeyDown={(e) => alPresionar(e, i)}
-          >
-            {p.etiqueta}
-          </button>
-        );
-      })}
+    <div className="pestanas">
+      <div className="pestanas__interior ancho" role="tablist" aria-label="Vistas del dashboard">
+        {pestanas.map((p, i) => {
+          const seleccionada = p.id === activa;
+          return (
+            <button
+              key={p.id}
+              ref={(el) => {
+                refs.current[p.id] = el;
+              }}
+              type="button"
+              role="tab"
+              id={`pestana-${p.id}`}
+              aria-selected={seleccionada}
+              aria-controls={`panel-${p.id}`}
+              tabIndex={seleccionada ? 0 : -1}
+              className="pestana"
+              onClick={() => onCambiar(p.id)}
+              onKeyDown={(e) => alPresionar(e, i)}
+            >
+              {p.etiqueta}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

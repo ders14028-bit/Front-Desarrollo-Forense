@@ -13,6 +13,11 @@ export const SLA_MINUTOS: Record<Severidad, number> = {
 export const GRUPO_CONTENCION = "Contención";
 /** Estado de un caso cerrado como incidente confirmado. */
 export const ESTADO_CONFIRMADO = "TruePositive";
+/** Estado de un caso cerrado como falso positivo (cuenta como cerrado, no como confirmado). */
+export const ESTADO_FALSO_POSITIVO = "FalsePositive";
+
+/** Tag que marca los datos de prueba; si hay alertas o casos con él, se muestra "Datos de laboratorio". */
+export const TAG_LABORATORIO = "simulacion";
 
 /** Intervalo de refresco automático. */
 export const REFRESCO_MS = 30_000;

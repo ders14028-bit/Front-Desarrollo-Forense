@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ESTADO_CONFIRMADO, GRUPO_CONTENCION, SLA_MINUTOS, ZONA_HORARIA } from "../config";
+import { ESTADO_CONFIRMADO, ESTADO_FALSO_POSITIVO, GRUPO_CONTENCION, SLA_MINUTOS, ZONA_HORARIA } from "../config";
 import type { Alerta, Severidad } from "../types/alerta";
 import { diaBogota } from "../utils/fechas";
 import { generarMocks } from "./generarMocks";
@@ -147,7 +147,7 @@ describe.each(SEMILLAS.flatMap((s) => AHORAS.map((a) => ({ semilla: s, ahora: a 
       expect(casos.some((c) => c.stage === "InProgress")).toBe(true);
       const confirmados = casos.filter((c) => c.stage === "Closed" && c.status === ESTADO_CONFIRMADO);
       expect(confirmados.length).toBeGreaterThanOrEqual(2);
-      expect(casos.filter((c) => c.stage === "Closed" && c.status === "FalsePositive")).toHaveLength(1);
+      expect(casos.filter((c) => c.stage === "Closed" && c.status === ESTADO_FALSO_POSITIVO)).toHaveLength(1);
     });
 
     it("tareas: Contención completadas y pendientes, y de otro grupo para no contarlas", () => {

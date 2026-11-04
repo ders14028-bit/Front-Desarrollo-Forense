@@ -1,4 +1,4 @@
-import { ESTADO_CONFIRMADO, GRUPO_CONTENCION, SLA_MINUTOS } from "../config";
+import { ESTADO_CONFIRMADO, ESTADO_FALSO_POSITIVO, GRUPO_CONTENCION, SLA_MINUTOS } from "../config";
 import type { Alerta, EstadoAlerta, EtiquetaSeveridad, Severidad } from "../types/alerta";
 import type { Caso } from "../types/caso";
 import type { EstadoTarea, Tarea } from "../types/tarea";
@@ -129,7 +129,7 @@ export function generarMocks(ahora: number, semilla: number): DatosMock {
   const destinos: Destino[] = [
     { status: ESTADO_CONFIRMADO, stage: "Closed" },
     { status: ESTADO_CONFIRMADO, stage: "Closed" },
-    { status: "FalsePositive", stage: "Closed" },
+    { status: ESTADO_FALSO_POSITIVO, stage: "Closed" },
     { status: "InProgress", stage: "InProgress" },
     { status: "InProgress", stage: "InProgress" },
     { status: "New", stage: "New" },

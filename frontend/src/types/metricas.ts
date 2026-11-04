@@ -39,16 +39,22 @@ export interface ResumenAlertas {
   antiguedadPromedioSinAtenderMs: number | null;
   /** Sin atender cuya antigüedad supera el SLA de su severidad. */
   fueraDeSla: number;
+  /** Siempre 4 elementos, de crítica (4) a baja (1), con ceros incluidos. */
   porSeveridad: ConteoPorSeveridad[];
+  /** Por etiqueta `escenario:<tipo>`, de mayor a menor. NO incluye las sin clasificar. */
   porTipoAmenaza: ConteoPorTipo[];
+  /** Alertas sin etiqueta `escenario:` ("Sin clasificar"), aparte de la lista ordenada. */
+  sinClasificar: number;
+  /** Por `source`, de mayor a menor. */
   porOrigen: ConteoPorOrigen[];
+  /** Los últimos 30 días en Bogotá, del más antiguo a hoy, con ceros incluidos. */
   porDia: ConteoPorDia[];
 }
 
 export interface AlertasConvertidas {
   convertidas: number;
   total: number;
-  /** 0–100; null si no hay alertas. */
+  /** Sobre las alertas recibidas, de 0 a 100 sin redondear; null si no hay alertas. */
   porcentaje: number | null;
 }
 

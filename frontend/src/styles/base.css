@@ -23,16 +23,34 @@ body {
   outline-offset: 2px;
 }
 
+/* Ancho común: encabezado, pestañas y contenido comparten los mismos bordes. */
+.ancho {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: var(--espacio-4);
+}
+
+/* Margen reducido para que quepan 2 tarjetas de 160 px por fila a 360 px. */
+@media (max-width: 480px) {
+  .ancho {
+    padding-inline: var(--espacio-3);
+  }
+}
+
 /* ---------- Encabezado ---------- */
 .encabezado {
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.encabezado__interior {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--espacio-2) var(--espacio-4);
-  padding: var(--espacio-3) var(--espacio-4);
-  background: var(--superficie);
-  border-bottom: 1px solid var(--borde);
+  padding-block: var(--espacio-3);
 }
 
 .encabezado__titulo {
@@ -62,8 +80,23 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--espacio-2);
-  color: var(--ok);
   font-weight: 600;
+}
+
+.estado__conexion--conectado {
+  color: var(--ok);
+}
+
+.estado__conexion--error {
+  color: var(--error);
+}
+
+.estado__conexion--simulado {
+  color: var(--aviso);
+}
+
+.estado__conexion--conectando {
+  color: var(--texto-suave);
 }
 
 .estado__punto {
@@ -82,11 +115,14 @@ body {
 
 /* ---------- Pestañas ---------- */
 .pestanas {
+  border-bottom: 1px solid var(--borde);
+}
+
+.pestanas__interior {
   display: flex;
   flex-wrap: wrap;
   gap: var(--espacio-1);
-  padding: var(--espacio-2) var(--espacio-4) 0;
-  border-bottom: 1px solid var(--borde);
+  padding-top: var(--espacio-2);
 }
 
 .pestana {
@@ -112,9 +148,185 @@ body {
 
 /* ---------- Contenido ---------- */
 .contenido {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--espacio-4);
+  padding-block: var(--espacio-4);
+}
+
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Secciones y tarjetas ---------- */
+.seccion {
+  margin-bottom: var(--espacio-6);
+}
+
+.seccion__titulo {
+  margin: 0 0 var(--espacio-3);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+/*
+ * Cada tarjeta ocupa 3 filas de la rejilla (título · valor · pie) y las comparte por subgrid:
+ * en una misma fila de tarjetas, el valor queda a la misma altura aunque un título use 2 líneas.
+ */
+.tarjeta {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: var(--espacio-1);
+  min-width: 0;
+  padding: var(--espacio-3);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+/* Navegadores sin subgrid: se reserva el alto de 2 líneas para el título. */
+@supports not (grid-template-rows: subgrid) {
+  .tarjeta {
+    grid-row: auto;
+    grid-template-rows: none;
+  }
+
+  .tarjeta__titulo {
+    min-height: 2.6em;
+  }
+}
+
+.tarjeta__pie {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
+
+.tarjeta__titulo {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--texto-suave);
+}
+
+.tarjeta__valor {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta__detalle,
+.estado-vacio {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--texto-suave);
+  overflow-wrap: anywhere;
+}
+
+.nota-laboratorio {
+  margin: auto 0 0;
+  padding-top: var(--espacio-1);
+  font-size: 0.6875rem;
+  font-style: italic;
+  color: var(--texto-suave);
+}
+
+/* ---------- Esqueleto (solo en la primera carga) ---------- */
+.esqueleto {
+  display: block;
+  background: var(--esqueleto);
+  border-radius: 4px;
+}
+
+.esqueleto--titulo {
+  width: 60%;
+  height: 0.8rem;
+}
+
+.esqueleto--valor {
+  width: 40%;
+  height: 1.75rem;
+  margin: var(--espacio-1) 0;
+}
+
+.esqueleto--detalle {
+  width: 80%;
+  height: 0.7rem;
+}
+
+.esqueleto--seccion {
+  width: 8rem;
+  height: 1rem;
+  margin-bottom: var(--espacio-3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .esqueleto {
+    animation: pulso 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes pulso {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ---------- Avisos de error ---------- */
+.aviso-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-3) var(--espacio-4);
+  color: var(--texto);
+  background: var(--error-fondo);
+  border: 1px solid var(--error);
+  border-radius: var(--radio);
+}
+
+.aviso-error__titulo {
+  margin: 0;
+  font-weight: 600;
+}
+
+.aviso-error__detalle {
+  margin: var(--espacio-1) 0 0;
+  font-size: 0.875rem;
+  color: var(--texto-suave);
+}
+
+.boton {
+  padding: var(--espacio-2) var(--espacio-4);
+  font: inherit;
+  font-weight: 600;
+  color: var(--acento-texto);
+  background: var(--acento);
+  border: 0;
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+
+.boton:hover {
+  filter: brightness(1.1);
 }
 
 .marcador {
