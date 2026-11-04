@@ -4,7 +4,7 @@ import { armarTipos } from "../../utils/graficas";
 import { FilaBarra } from "./BarrasHorizontales";
 import { TarjetaGrafica } from "./TarjetaGrafica";
 
-/** Top 3 tipos de amenaza, "Otros (N tipos)" desplegable y "Sin clasificar" aparte al final. */
+/** Los 5 tipos mayores, "Otros (N tipos)" desplegable para el resto y "Sin clasificar" aparte al final. */
 export function GraficaTipos({ alertas }: { alertas: ResumenAlertas }) {
   const [abierto, setAbierto] = useState(false);
   const idHijos = useId();
@@ -41,6 +41,7 @@ export function GraficaTipos({ alertas }: { alertas: ResumenAlertas }) {
             }
             valor={otros.cantidad}
             maximo={maximo}
+            color="var(--acento-suave)"
           >
             {abierto && (
               <ul id={idHijos} className="barras barras--hijos">

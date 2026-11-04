@@ -20,6 +20,26 @@ const hora = new Intl.DateTimeFormat("en-GB", {
 
 const fueraDeSla = (a: Alerta, ahora: number) => ahora - a._createdAt > SLA_MINUTOS[a.severity] * MIN;
 
+// A media jornada (las 4 recientes caen todas en "hoy"): 10:00 y 23:00 en Bogotá.
+describe.each(SEMILLAS.flatMap((s) => [AHORAS[0], AHORAS[1]].map((a) => ({ semilla: s, ahora: a }))))(
+  "generarMocks: reparto por día (semilla $semilla, ahora $ahora)",
+  ({ semilla, ahora }) => {
+    const { alertas } = generarMocks(ahora, semilla);
+    const porDia = new Map<string, number>();
+    for (const a of alertas) porDia.set(diaBogota(a._createdAt), (porDia.get(diaBogota(a._createdAt)) ?? 0) + 1);
+
+    it("hoy hay 4 alertas", () => {
+      expect(porDia.get(diaBogota(ahora))).toBe(4);
+    });
+
+    it("ningún otro día pasa de 3 alertas (hoy no es un pico aislado)", () => {
+      for (const [dia, cantidad] of porDia) {
+        if (dia !== diaBogota(ahora)) expect(cantidad).toBeLessThanOrEqual(3);
+      }
+    });
+  },
+);
+
 describe("generarMocks: determinismo", () => {
   it("misma semilla + mismo ahora = mismo resultado", () => {
     const ahora = AHORAS[0];
@@ -140,6 +160,16 @@ describe.each(SEMILLAS.flatMap((s) => AHORAS.map((a) => ({ semilla: s, ahora: a 
         expect(deSeveridad.some((a) => !fueraDeSla(a, ahora))).toBe(true);
         expect(deSeveridad.some((a) => fueraDeSla(a, ahora))).toBe(true);
       }
+    });
+
+    it("las únicas alertas de las últimas 24 h son las 4 sin atender dentro de SLA (no hay pico)", () => {
+      const recientes = alertas.filter((a) => ahora - a._createdAt < DIA);
+      expect(recientes).toHaveLength(4);
+      for (const a of recientes) {
+        expect(a.status).toBe("New");
+        expect(fueraDeSla(a, ahora)).toBe(false);
+      }
+      expect(new Set(recientes.map((a) => a.severity))).toEqual(new Set([1, 2, 3, 4]));
     });
 
     it("casos: abiertos, en progreso, ≥2 TruePositive cerrados y un FalsePositive", () => {

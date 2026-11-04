@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ConteoPorDia } from "../types/metricas";
+import type { ConteoPorDia, ConteoPorTipo } from "../types/metricas";
 import { ultimosDias } from "./fechas";
 import {
   anchoRelativo,
@@ -22,6 +22,7 @@ describe("nombreLegible", () => {
   });
 
   it("herramientas y valores desconocidos", () => {
+    expect(nombreLegible("auditd")).toBe("AuditD");
     expect(nombreLegible("wazuh")).toBe("Wazuh");
     expect(nombreLegible("correo")).toBe("Correo");
     expect(nombreLegible("misp")).toBe("MISP");
@@ -72,40 +73,46 @@ describe("filasOrigen", () => {
     const filas = filasOrigen([
       { origen: "misp", cantidad: 1 },
       { origen: "wazuh", cantidad: 7 },
-      { origen: "correo", cantidad: 3 },
+      { origen: "auditd", cantidad: 3 },
     ]);
     expect(filas.map((f) => [f.etiqueta, f.cantidad])).toEqual([
       ["Wazuh", 7],
-      ["Correo", 3],
+      ["AuditD", 3],
       ["MISP", 1],
     ]);
   });
 });
 
+const tipos = (...pares: [string, number][]): ConteoPorTipo[] => pares.map(([tipo, cantidad]) => ({ tipo, cantidad }));
+
 describe("armarTipos", () => {
-  it("top 3, luego Otros con la suma y los tipos agrupados; Sin clasificar aparte", () => {
+  it("los 5 mayores por separado; Otros con la suma y los tipos restantes; Sin clasificar aparte", () => {
     const r = armarTipos(
-      [
-        { tipo: "phishing", cantidad: 6 },
-        { tipo: "malware", cantidad: 4 },
-        { tipo: "fuerza-bruta", cantidad: 3 },
-        { tipo: "vulnerabilidad", cantidad: 2 },
-        { tipo: "escalamiento", cantidad: 1 },
-      ],
+      tipos(
+        ["phishing", 6],
+        ["malware", 5],
+        ["fuerza-bruta", 4],
+        ["vulnerabilidad", 3],
+        ["escalamiento", 2],
+        ["correlacion", 1],
+        ["inteligencia-misp", 1],
+      ),
       2,
     );
 
     expect(r.principales.map((f) => [f.etiqueta, f.cantidad])).toEqual([
       ["Phishing", 6],
-      ["Malware", 4],
-      ["Fuerza bruta", 3],
+      ["Malware", 5],
+      ["Fuerza bruta", 4],
+      ["Vulnerabilidad", 3],
+      ["Escalamiento", 2],
     ]);
     expect(r.otros).toEqual({
       etiqueta: "Otros (2 tipos)",
-      cantidad: 3,
+      cantidad: 2,
       tipos: [
-        { clave: "vulnerabilidad", etiqueta: "Vulnerabilidad", cantidad: 2 },
-        { clave: "escalamiento", etiqueta: "Escalamiento", cantidad: 1 },
+        { clave: "correlacion", etiqueta: "Correlación", cantidad: 1 },
+        { clave: "inteligencia-misp", etiqueta: "Inteligencia MISP", cantidad: 1 },
       ],
     });
     expect(r.sinClasificar).toBe(2);
@@ -114,63 +121,58 @@ describe("armarTipos", () => {
 
   it("la escala incluye la suma de Otros cuando supera al tipo mayor", () => {
     const r = armarTipos(
-      [
-        { tipo: "a", cantidad: 3 },
-        { tipo: "b", cantidad: 3 },
-        { tipo: "c", cantidad: 3 },
-        { tipo: "d", cantidad: 2 },
-        { tipo: "e", cantidad: 2 },
-      ],
+      tipos(["a", 3], ["b", 3], ["c", 3], ["d", 3], ["e", 3], ["f", 2], ["g", 2], ["h", 2]),
       0,
     );
-    expect(r.otros?.cantidad).toBe(4);
-    expect(r.maximo).toBe(4);
+    expect(r.otros?.cantidad).toBe(6);
+    expect(r.otros?.etiqueta).toBe("Otros (3 tipos)");
+    expect(r.maximo).toBe(6);
   });
 
   it("Sin clasificar también cuenta para la escala", () => {
-    expect(armarTipos([{ tipo: "a", cantidad: 1 }], 9).maximo).toBe(9);
+    expect(armarTipos(tipos(["a", 1]), 9).maximo).toBe(9);
   });
 
-  it("3 tipos o menos: no hay Otros; con 4, 'Otros (1 tipo)'", () => {
-    const tres = armarTipos(
-      [
-        { tipo: "a", cantidad: 3 },
-        { tipo: "b", cantidad: 2 },
-        { tipo: "c", cantidad: 1 },
-      ],
-      0,
-    );
-    expect(tres.otros).toBeNull();
-    expect(tres.principales).toHaveLength(3);
+  it("5 tipos o menos: no hay Otros; con 6, 'Otros (1 tipo)'", () => {
+    const cinco = armarTipos(tipos(["a", 5], ["b", 4], ["c", 3], ["d", 2], ["e", 1]), 0);
+    expect(cinco.otros).toBeNull();
+    expect(cinco.principales).toHaveLength(5);
 
-    const cuatro = armarTipos(
-      [
-        { tipo: "a", cantidad: 4 },
-        { tipo: "b", cantidad: 3 },
-        { tipo: "c", cantidad: 2 },
-        { tipo: "d", cantidad: 1 },
-      ],
-      0,
-    );
-    expect(cuatro.otros?.etiqueta).toBe("Otros (1 tipo)");
+    const seis = armarTipos(tipos(["a", 6], ["b", 5], ["c", 4], ["d", 3], ["e", 2], ["f", 1]), 0);
+    expect(seis.principales).toHaveLength(5);
+    expect(seis.otros).toMatchObject({ etiqueta: "Otros (1 tipo)", cantidad: 1 });
   });
 
   it("los empates se ordenan por nombre, sin importar el orden de entrada", () => {
     const r = armarTipos(
-      [
-        { tipo: "phishing", cantidad: 2 },
-        { tipo: "x-raro", cantidad: 2 },
-        { tipo: "malware", cantidad: 2 },
-        { tipo: "fuerza-bruta", cantidad: 2 },
-      ],
+      tipos(
+        ["phishing", 2],
+        ["x-raro", 2],
+        ["malware", 2],
+        ["fuerza-bruta", 2],
+        ["escalamiento", 2],
+        ["correlacion", 2],
+      ),
       0,
     );
-    expect(r.principales.map((f) => f.clave)).toEqual(["fuerza-bruta", "malware", "phishing"]);
+    expect(r.principales.map((f) => f.clave)).toEqual([
+      "correlacion",
+      "escalamiento",
+      "fuerza-bruta",
+      "malware",
+      "phishing",
+    ]);
     expect(r.otros?.tipos.map((f) => f.clave)).toEqual(["x-raro"]);
   });
 
   it("sin datos: todo vacío y escala 0", () => {
     expect(armarTipos([], 0)).toEqual({ principales: [], otros: null, sinClasificar: 0, maximo: 0 });
+  });
+
+  it("el número de tipos principales se puede cambiar", () => {
+    const r = armarTipos(tipos(["a", 3], ["b", 2], ["c", 1]), 0, 1);
+    expect(r.principales).toHaveLength(1);
+    expect(r.otros?.etiqueta).toBe("Otros (2 tipos)");
   });
 });
 

@@ -1,4 +1,4 @@
-import { NOMBRES_ESCENARIO } from "../config";
+import { NOMBRES_LEGIBLES } from "../config";
 import type { Severidad } from "../types/alerta";
 import type { ConteoPorDia, ConteoPorOrigen, ConteoPorSeveridad, ConteoPorTipo } from "../types/metricas";
 import { diaBogota, diaCorto, etiquetaDia } from "./fechas";
@@ -11,7 +11,7 @@ const SIGLAS = new Set(["misp", "ioc", "dns", "vpn", "siem"]);
 
 /** "fuerza-bruta" → "Fuerza bruta"; "inteligencia-misp" → "Inteligencia MISP"; "wazuh" → "Wazuh". */
 export function nombreLegible(clave: string): string {
-  const conocido = NOMBRES_ESCENARIO[clave];
+  const conocido = NOMBRES_LEGIBLES[clave];
   if (conocido) return conocido;
 
   const palabras = clave.split(/[-_\s]+/).filter(Boolean);
@@ -67,6 +67,9 @@ export function maximoDe(valores: number[]): number {
 
 // ---------- Tipo de amenaza: top N + "Otros" + "Sin clasificar" ----------
 
+/** Cuántos tipos se muestran por separado; el resto va en "Otros". */
+export const TIPOS_PRINCIPALES = 5;
+
 export interface GrupoOtros {
   /** "Otros (2 tipos)". */
   etiqueta: string;
@@ -87,7 +90,7 @@ export interface TiposArmados {
   maximo: number;
 }
 
-export function armarTipos(porTipo: ConteoPorTipo[], sinClasificar: number, topN = 3): TiposArmados {
+export function armarTipos(porTipo: ConteoPorTipo[], sinClasificar: number, topN = TIPOS_PRINCIPALES): TiposArmados {
   const filas = ordenar(porTipo.map((t) => ({ clave: t.tipo, etiqueta: nombreLegible(t.tipo), cantidad: t.cantidad })));
   const principales = filas.slice(0, topN);
   const resto = filas.slice(topN);

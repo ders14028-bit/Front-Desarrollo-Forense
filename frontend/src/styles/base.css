@@ -140,6 +140,16 @@ body {
   color: var(--texto);
 }
 
+/* El anillo de foco solo aparece al navegar con teclado, no tras un clic con el mouse. */
+.pestana:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.pestana:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: -2px;
+}
+
 .pestana[aria-selected="true"] {
   color: var(--texto);
   font-weight: 600;
@@ -424,6 +434,7 @@ body {
 }
 
 .dia__valor {
+  color: var(--texto); /* el mismo color para todos los días */
   font-size: 0.6875rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;

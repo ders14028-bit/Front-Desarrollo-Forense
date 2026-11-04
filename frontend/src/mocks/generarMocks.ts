@@ -38,25 +38,26 @@ interface Plan {
 }
 
 /**
- * Reparte 40 alertas: 6 New dentro de SLA (una o más por severidad), 20 New fuera de SLA,
+ * Reparte 40 alertas: 4 New dentro de SLA (una por severidad), 22 New fuera de SLA,
  * 5 InProgress, 6 Imported y 3 Ignored. Severidades: 5 críticas, 14 altas, 15 medias, 6 bajas.
+ *
+ * Las 4 dentro de SLA son recientes por definición (el SLA de una baja es de 4 h), así que son
+ * las únicas de las últimas 24 h: "hoy" tiene 4 alertas y no un pico. Las otras 36 se reparten
+ * parejo entre 1 y 29 días atrás (una por franja de ~19 h, con variación aleatoria).
  */
 function planificar(rng: Aleatorio): Plan[] {
   const planes: Plan[] = [];
 
-  const dentroDeSla: Severidad[] = [4, 3, 3, 2, 2, 1];
+  const dentroDeSla: Severidad[] = [4, 3, 2, 1];
   for (const s of dentroDeSla) {
     planes.push({ severidad: s, estado: "New", edadMs: SLA_MINUTOS[s] * MIN * (0.2 + rng() * 0.6) });
   }
 
-  const fueraDeSla = barajar<Severidad>(rng, [4, 4, 4, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1]);
-  fueraDeSla.forEach((s, i) => {
-    // Una de cada cuatro está apenas fuera de SLA; el resto lleva horas o días sin atender.
-    const edadMs = i % 4 === 0 ? SLA_MINUTOS[s] * MIN * (1.2 + rng() * 1.8) : DIA * (1 + rng() * 28);
-    planes.push({ severidad: s, estado: "New", edadMs });
-  });
-  // Una de las alertas sin atender se crea a las 23:30 de Bogotá.
-  planes.find((p, i) => i >= dentroDeSla.length && p.severidad === 3)!.a2330 = true;
+  // La edad de las demás se asigna al final, con el reparto parejo.
+  const sinEdad: Plan[] = [];
+
+  const fueraDeSla = barajar<Severidad>(rng, [4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1]);
+  for (const s of fueraDeSla) sinEdad.push({ severidad: s, estado: "New", edadMs: 0 });
 
   const resto = barajar<Severidad>(rng, [4, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1]);
   const estados: EstadoAlerta[] = [
@@ -64,14 +65,23 @@ function planificar(rng: Aleatorio): Plan[] {
     ...Array<EstadoAlerta>(6).fill("Imported"),
     ...Array<EstadoAlerta>(3).fill("Ignored"),
   ];
-  resto.forEach((s, i) => {
-    const estado = estados[i];
-    const edadMs =
-      estado === "InProgress" ? HORA * (1 + rng() * 239) : estado === "Imported" ? DIA * (6 + rng() * 22) : DIA * (1 + rng() * 27);
-    planes.push({ severidad: s, estado, edadMs });
-  });
+  resto.forEach((s, i) => sinEdad.push({ severidad: s, estado: estados[i], edadMs: 0 }));
 
-  return planes;
+  // Una edad por franja, en orden aleatorio.
+  const edades = barajar(
+    rng,
+    Array.from({ length: sinEdad.length }, (_, i) => DIA * (1 + ((i + rng()) * 28) / sinEdad.length)),
+  );
+  // Las convertidas en caso necesitan al menos 6 días de historia (sus casos se cierran antes de ahora).
+  for (const p of sinEdad.filter((x) => x.estado === "Imported")) {
+    p.edadMs = edades.splice(edades.findIndex((e) => e >= 6 * DIA), 1)[0];
+  }
+  for (const p of sinEdad.filter((x) => x.edadMs === 0)) p.edadMs = edades.shift()!;
+
+  // Una de las alertas sin atender fuera de SLA se crea a las 23:30 de Bogotá.
+  sinEdad.find((p) => p.estado === "New" && p.severidad === 3)!.a2330 = true;
+
+  return [...planes, ...sinEdad];
 }
 
 /** Instante (ms) de las 23:30 de Bogotá de hace 3 días. Date.UTC normaliza las horas > 23. */

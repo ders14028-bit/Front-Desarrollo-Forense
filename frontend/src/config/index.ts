@@ -19,8 +19,12 @@ export const ESTADO_FALSO_POSITIVO = "FalsePositive";
 /** Tag que marca los datos de prueba; si hay alertas o casos con él, se muestra "Datos de laboratorio". */
 export const TAG_LABORATORIO = "simulacion";
 
-/** Nombres legibles de los escenarios conocidos (etiqueta `escenario:<clave>`). El resto se formatea solo. */
-export const NOMBRES_ESCENARIO: Record<string, string> = {
+/**
+ * Nombres legibles de escenarios (etiqueta `escenario:<clave>`) y herramientas (`source`) cuyo
+ * nombre no sale de una regla simple. Lo que no esté aquí se formatea solo ("wazuh" → "Wazuh").
+ */
+export const NOMBRES_LEGIBLES: Record<string, string> = {
+  auditd: "AuditD",
   "fuerza-bruta": "Fuerza bruta",
   phishing: "Phishing",
   malware: "Malware",

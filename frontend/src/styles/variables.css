@@ -17,6 +17,7 @@
   --foco: #1f5fbf;
   --esqueleto: #e3e6eb;
   --pista: #e3e6eb;
+  --acento-suave: #94b4e8;
   /* Severidad: rojo, coral, ámbar y gris (barras con contraste ~3:1 o más sobre la tarjeta) */
   --sev-critica: #c62828;
   --sev-alta: #e0533d;
@@ -48,6 +49,7 @@
     --foco: #6ea3ff;
     --esqueleto: #2a3040;
     --pista: #2a3040;
+    --acento-suave: #4a6ea6;
     --sev-critica: #ff6b6b;
     --sev-alta: #ff8a65;
     --sev-media: #f2b84b;
