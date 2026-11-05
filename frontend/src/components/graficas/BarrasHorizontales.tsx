@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { anchoRelativo } from "../../utils/graficas";
+import { formatoEntero } from "../../utils/numeros";
 
 interface FilaProps {
   etiqueta: ReactNode;
@@ -20,7 +21,7 @@ export function FilaBarra({ etiqueta, valor, maximo, color, children }: FilaProp
   return (
     <li className="barra-fila">
       <span className="barra-fila__etiqueta">{etiqueta}</span>
-      <span className="barra-fila__valor">{valor}</span>
+      <span className="barra-fila__valor">{formatoEntero(valor)}</span>
       <span className="barra-fila__pista" aria-hidden="true">
         <span
           className="barra-fila__barra"

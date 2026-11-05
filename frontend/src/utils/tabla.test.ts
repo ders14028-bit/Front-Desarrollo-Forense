@@ -526,14 +526,22 @@ describe("calcularVista (filtrar → ordenar → paginar)", () => {
 describe("textoAvisoTruncada", () => {
   it("solo las más recientes", () => {
     expect(textoAvisoTruncada({ recientes: 1000, criticasYAltasAdicionales: 0 }, 1500, 30)).toBe(
-      "Mostrando las 1000 más recientes de 1500 en los últimos 30 días",
+      "Mostrando las 1.000 más recientes de 1.500 en los últimos 30 días",
     );
   });
 
   it("con críticas y altas añadidas, en plural y singular", () => {
     expect(textoAvisoTruncada({ recientes: 1000, criticasYAltasAdicionales: 613 }, 23000, 30)).toBe(
-      "Mostrando las 1000 alertas más recientes y, además, 613 críticas o altas sin atender más antiguas (de 23000 en los últimos 30 días)",
+      "Mostrando las 1.000 alertas más recientes y, además, 613 críticas o altas sin atender más antiguas (de 23.000 en los últimos 30 días)",
     );
     expect(textoAvisoTruncada({ recientes: 1000, criticasYAltasAdicionales: 1 }, 1500, 30)).toContain("1 crítica o alta sin atender más antigua");
+  });
+});
+
+describe("cifras con separador de miles es-CO", () => {
+  it("el resumen y el 'Mostrando' agrupan los miles", () => {
+    expect(textoResumenLista(23261, 23261, false, 30)).toBe("23.261 alertas · últimos 30 días");
+    expect(textoResumenLista(23261, 1500, true, 30)).toBe("1.500 de 23.261 alertas · últimos 30 días");
+    expect(textoMostrando({ items: [], desde: 1001, hasta: 1025, total: 1500, pagina: 41, totalPaginas: 60 })).toBe("Mostrando 1.001–1.025 de 1.500");
   });
 });

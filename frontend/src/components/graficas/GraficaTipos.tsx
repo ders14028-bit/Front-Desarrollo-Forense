@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import type { ResumenAlertas } from "../../types/metricas";
 import { armarTipos } from "../../utils/graficas";
 import { FilaBarra } from "./BarrasHorizontales";
+import { formatoEntero } from "../../utils/numeros";
 import { TarjetaGrafica } from "./TarjetaGrafica";
 
 /** Los 5 tipos mayores, "Otros (N tipos)" desplegable para el resto y "Sin clasificar" aparte al final. */
@@ -10,9 +11,9 @@ export function GraficaTipos({ alertas }: { alertas: ResumenAlertas }) {
   const idHijos = useId();
   const { principales, otros, sinClasificar, maximo } = armarTipos(alertas.porTipoAmenaza, alertas.sinClasificar);
 
-  const partes = principales.map((f) => `${f.etiqueta} ${f.cantidad}`);
-  if (otros) partes.push(`${otros.etiqueta} ${otros.cantidad}`);
-  partes.push(`Sin clasificar ${sinClasificar}`);
+  const partes = principales.map((f) => `${f.etiqueta} ${formatoEntero(f.cantidad)}`);
+  if (otros) partes.push(`${otros.etiqueta} ${formatoEntero(otros.cantidad)}`);
+  partes.push(`Sin clasificar ${formatoEntero(sinClasificar)}`);
   const resumen = `Alertas por tipo de amenaza: ${partes.join(", ")}.`;
 
   return (

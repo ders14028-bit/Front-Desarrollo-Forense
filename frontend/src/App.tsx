@@ -43,7 +43,13 @@ export default function App() {
       <a className="saltar" href="#contenido">
         Saltar al contenido
       </a>
-      <Encabezado actualizadoEn={visible.actualizadoEn} hayError={visible.error !== null} modoMock={modoMock} />
+      <Encabezado
+        actualizadoEn={visible.actualizadoEn}
+        hayError={visible.error !== null}
+        modoMock={modoMock}
+        thehive={visible.datos?.thehive ?? null}
+        datosDe={visible.datos?.generadoEn ?? null}
+      />
       {hayDatosDeLaboratorio(resumen.datos, alertas.datos) && <AvisoLaboratorio />}
       <Pestanas
         pestanas={PESTANAS}

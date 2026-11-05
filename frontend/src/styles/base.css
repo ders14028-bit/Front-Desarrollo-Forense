@@ -87,7 +87,8 @@ body {
   color: var(--ok);
 }
 
-.estado__conexion--error {
+.estado__conexion--error,
+.estado__conexion--sin-thehive {
   color: var(--error);
 }
 
@@ -1557,16 +1558,19 @@ body {
 }
 
 /* ---------- Aviso de datos de laboratorio (debajo del encabezado, en las dos vistas) ---------- */
+/* Dentro de .ancho: la franja mide lo mismo que el encabezado, las pestañas y el contenido. */
 .aviso-laboratorio {
-  background: var(--superficie);
-  border-bottom: 1px solid var(--borde);
+  margin-block: var(--espacio-3) 0;
 }
 
 .aviso-laboratorio__texto {
   margin: 0;
-  padding-block: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
   font-size: 0.875rem;
   color: var(--texto);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
 }
 
 .aviso-laboratorio__etiqueta {

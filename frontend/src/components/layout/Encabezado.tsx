@@ -1,4 +1,5 @@
 import { REFRESCO_MS } from "../../config";
+import type { EstadoTheHive } from "../../types/metricas";
 import { formatoHora } from "../../utils/fechas";
 import { estadoConexion } from "./estadoConexion";
 
@@ -7,10 +8,14 @@ interface Props {
   actualizadoEn: number | null;
   hayError: boolean;
   modoMock: boolean;
+  /** Lo que el backend dice de TheHive en la respuesta que se está viendo. */
+  thehive?: EstadoTheHive | null;
+  /** Instante (ms) en que se calcularon esos datos (`generadoEn`). */
+  datosDe?: number | null;
 }
 
-export function Encabezado({ actualizadoEn, hayError, modoMock }: Props) {
-  const estado = estadoConexion({ hayError, modoMock, tieneDatos: actualizadoEn !== null });
+export function Encabezado({ actualizadoEn, hayError, modoMock, thehive, datosDe }: Props) {
+  const estado = estadoConexion({ hayError, modoMock, tieneDatos: actualizadoEn !== null, thehive, datosDe });
   const hora = actualizadoEn === null ? "—" : formatoHora(actualizadoEn);
 
   return (

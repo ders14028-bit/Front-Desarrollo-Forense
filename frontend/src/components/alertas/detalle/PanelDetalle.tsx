@@ -1,3 +1,4 @@
+import { formatoEntero } from "../../../utils/numeros";
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useDialogoModal } from "../../../hooks/useDialogoModal";
@@ -95,7 +96,7 @@ export function PanelDetalle({ id, filas, onCambiarAlerta, onCerrar }: Props) {
                   <span className="dialogo__hueco" aria-hidden="true" />
                 )}
                 <span className="dialogo__posicion">
-                  {indice + 1} de {filas.length}
+                  {formatoEntero(indice + 1)} de {formatoEntero(filas.length)}
                 </span>
                 {siguiente ? (
                   <button type="button" className="dialogo__boton" onClick={() => onCambiarAlerta(siguiente.id)}>
@@ -134,7 +135,7 @@ export function PanelDetalle({ id, filas, onCambiarAlerta, onCerrar }: Props) {
           )}
           {enLista && (
             <p className="solo-lectores" role="status">
-              Alerta {indice + 1} de {filas.length}: {fila?.titulo}
+              Alerta {formatoEntero(indice + 1)} de {formatoEntero(filas.length)}: {fila?.titulo}
             </p>
           )}
         </header>

@@ -1,5 +1,6 @@
 import type { Alerta, EstadoAlerta, Severidad } from "./alerta";
 import type { Caso, EtapaCaso } from "./caso";
+import type { EstadoTheHive } from "./metricas";
 import type { Tarea } from "./tarea";
 
 /**
@@ -69,6 +70,8 @@ export interface ListaAlertas {
   composicion: ComposicionLista;
   /** true si hay alertas o casos de prueba ("Datos de laboratorio"). */
   datosDeLaboratorio: boolean;
+  /** Ausente = se asume que TheHive respondió. */
+  thehive?: EstadoTheHive;
   /** Más recientes primero. */
   alertas: AlertaFila[];
 }

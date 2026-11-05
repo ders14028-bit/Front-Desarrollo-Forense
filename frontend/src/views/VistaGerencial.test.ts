@@ -62,7 +62,93 @@ describe("VistaGerencial", () => {
   });
 });
 
+// Resumen con las cifras reales del humo: 23.261 alertas, casi todas sin atender.
+async function resumenGrande(): Promise<ResumenGerencial> {
+  const r = await resumenMock();
+  return {
+    ...r,
+    alertas: {
+      ...r.alertas,
+      recibidas: 23261,
+      sinAtender: 23148,
+      criticasYAltas: 1615,
+      fueraDeSla: 22000,
+      porSeveridad: [
+        { severidad: 4, cantidad: 27 },
+        { severidad: 3, cantidad: 1588 },
+        { severidad: 2, cantidad: 540 },
+        { severidad: 1, cantidad: 21106 },
+      ],
+    },
+  };
+}
+
+describe("VistaGerencial: cifras y porcentajes", () => {
+  it("las cifras llevan separador de miles es-CO (23.261)", async () => {
+    const h = html(await resumenGrande());
+    expect(h).toContain(">23.261<");
+    expect(h).toContain(">23.148<");
+    expect(h).toContain(">1.615<");
+    expect(h).not.toContain(">23261<");
+  });
+
+  it("'Sin atender' lleva debajo 'N % del total'", async () => {
+    const h = html(await resumenGrande());
+    expect(h).toContain("99,5 % del total"); // 23.148 / 23.261
+  });
+
+  it("'Fuera de SLA' lleva debajo 'N % del total' (sobre las alertas recibidas)", async () => {
+    const h = html(await resumenGrande());
+    expect(h).toContain("94,6 % del total"); // 22.000 / 23.261
+    expect(contar(h, "% del total")).toBe(2);
+  });
+
+  it("'Críticas y altas' lleva debajo 'N críticas' (las de severidad 4)", async () => {
+    const h = html(await resumenGrande());
+    expect(h).toContain(">27 críticas<");
+  });
+
+  it("una sola crítica va en singular y sin críticas no se inventa la línea", async () => {
+    const r = await resumenGrande();
+    const una = { ...r, alertas: { ...r.alertas, porSeveridad: r.alertas.porSeveridad.map((s) => (s.severidad === 4 ? { ...s, cantidad: 1 } : s)) } };
+    expect(html(una)).toContain(">1 crítica<");
+    const cero = { ...r, alertas: { ...r.alertas, porSeveridad: r.alertas.porSeveridad.map((s) => (s.severidad === 4 ? { ...s, cantidad: 0 } : s)) } };
+    expect(html(cero)).toContain(">0 críticas<");
+  });
+
+  it("nunca dice 100 % si falta alguna alerta ni 0 % si hay alguna", async () => {
+    const r = await resumenGrande();
+    const casi = { ...r, alertas: { ...r.alertas, sinAtender: 23260 } };
+    expect(html(casi)).toContain("99,9 % del total");
+    const todas = { ...r, alertas: { ...r.alertas, sinAtender: 23261 } };
+    expect(html(todas)).toContain("100 % del total");
+    const una = { ...r, alertas: { ...r.alertas, fueraDeSla: 1 } };
+    expect(html(una)).toContain("menos de 0,1 % del total");
+  });
+
+  it("con 0 sigue la frase que explica, no el porcentaje", async () => {
+    const r = await resumenGrande();
+    const h = html({ ...r, alertas: { ...r.alertas, sinAtender: 0, fueraDeSla: 0 } });
+    expect(h).toContain("No hay alertas sin atender");
+    expect(h).toContain("Ninguna fuera de plazo");
+    expect(contar(h, "% del total")).toBe(0);
+  });
+
+  it("'X de N (P %)' de las convertidas también agrupa los miles", async () => {
+    const r = await resumenGrande();
+    const h = html({ ...r, casos: { ...r.casos, alertasConvertidas: { convertidas: 1200, total: 23261, porcentaje: (1200 / 23261) * 100 } } });
+    expect(h).toContain("1.200 de 23.261");
+    expect(h).toContain("(5,2 %)");
+  });
+});
+
 describe("AvisoLaboratorio", () => {
+  it("va dentro del mismo ancho (.ancho) que el contenido, no de borde a borde", () => {
+    const h = renderToStaticMarkup(createElement(AvisoLaboratorio));
+    expect(h).toMatch(/^<div class="aviso-laboratorio ancho">/);
+    expect(h).not.toMatch(/class="aviso-laboratorio__texto ancho"/);
+  });
+
   it("es un solo aviso con el texto acordado", () => {
     const h = renderToStaticMarkup(createElement(AvisoLaboratorio));
     const texto = h.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();

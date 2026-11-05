@@ -70,11 +70,21 @@ export interface ResumenCasos {
   tiempoPromedioCierreMs: number | null;
 }
 
+/** Estado de la última consulta del backend a TheHive (ver docs/contrato-api.md, cambio B). */
+export interface EstadoTheHive {
+  /** true si la última consulta del backend a TheHive terminó bien. */
+  respondio: boolean;
+  /** Instante (ms) de esa última consulta. */
+  consultadoEn: number;
+}
+
 export interface ResumenGerencial {
   /** Instante (ms) en que se generó el resumen. */
   generadoEn: number;
   /** true si las cifras incluyen datos de prueba ("Datos de laboratorio"). */
   datosDeLaboratorio: boolean;
+  /** Ausente = se asume que TheHive respondió (el mock y un backend anterior no lo mandan). */
+  thehive?: EstadoTheHive;
   alertas: ResumenAlertas;
   casos: ResumenCasos;
 }

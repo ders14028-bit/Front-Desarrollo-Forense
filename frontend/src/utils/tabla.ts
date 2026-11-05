@@ -1,6 +1,7 @@
 import type { EstadoAlerta, Severidad } from "../types/alerta";
 import type { AlertaFila, ComposicionLista } from "../types/listaAlertas";
 import { diaBogota, ultimosDias } from "./fechas";
+import { formatoEntero } from "./numeros";
 
 /** Lógica pura de la tabla de la Vista unificada: filtrar, ordenar y paginar en el frontend. */
 
@@ -250,8 +251,9 @@ export function paginar<T>(items: T[], pagina: number, tamano = TAMANO_PAGINA): 
 /** "Mostrando 26–50 de 112" (con un solo elemento: "Mostrando 101 de 101"). */
 export function textoMostrando(p: Pagina<unknown>): string {
   if (p.total === 0) return "No hay alertas que mostrar";
-  if (p.desde === p.hasta) return `Mostrando ${p.desde} de ${p.total}`;
-  return `Mostrando ${p.desde}–${p.hasta} de ${p.total}`;
+  const [d, h, t] = [formatoEntero(p.desde), formatoEntero(p.hasta), formatoEntero(p.total)];
+  if (p.desde === p.hasta) return `Mostrando ${d} de ${t}`;
+  return `Mostrando ${d}–${h} de ${t}`;
 }
 
 // ---------- Estado de la tabla ----------
@@ -291,7 +293,7 @@ export function calcularVista(filas: AlertaFila[], estado: EstadoTabla, ahora: n
 /** "112 alertas · últimos 30 días", o con filtros activos "7 de 112 alertas · últimos 30 días". */
 export function textoResumenLista(total: number, coincidencias: number, conFiltros: boolean, dias: number): string {
   const alertas = total === 1 ? "alerta" : "alertas";
-  const cantidad = conFiltros ? `${coincidencias} de ${total}` : `${total}`;
+  const cantidad = conFiltros ? `${formatoEntero(coincidencias)} de ${formatoEntero(total)}` : formatoEntero(total);
   return `${cantidad} ${alertas} · últimos ${dias} días`;
 }
 
@@ -302,8 +304,8 @@ export function textoResumenLista(total: number, coincidencias: number, conFiltr
 export function textoAvisoTruncada(composicion: ComposicionLista, total: number, dias: number): string {
   const { recientes, criticasYAltasAdicionales: extra } = composicion;
   if (extra > 0) {
-    const adicionales = extra === 1 ? "1 crítica o alta sin atender más antigua" : `${extra} críticas o altas sin atender más antiguas`;
-    return `Mostrando las ${recientes} alertas más recientes y, además, ${adicionales} (de ${total} en los últimos ${dias} días)`;
+    const adicionales = extra === 1 ? "1 crítica o alta sin atender más antigua" : `${formatoEntero(extra)} críticas o altas sin atender más antiguas`;
+    return `Mostrando las ${formatoEntero(recientes)} alertas más recientes y, además, ${adicionales} (de ${formatoEntero(total)} en los últimos ${dias} días)`;
   }
-  return `Mostrando las ${recientes} más recientes de ${total} en los últimos ${dias} días`;
+  return `Mostrando las ${formatoEntero(recientes)} más recientes de ${formatoEntero(total)} en los últimos ${dias} días`;
 }

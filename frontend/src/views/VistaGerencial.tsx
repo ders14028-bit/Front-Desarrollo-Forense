@@ -6,11 +6,19 @@ import type { ResumenGerencial } from "../types/metricas";
 import { formatoAntiguedad } from "../utils/fechas";
 import { SeccionGraficas } from "./SeccionGraficas";
 
-const porcentaje = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 });
-const plural = (n: number, singular: string, plural: string) => `${n} ${n === 1 ? singular : plural}`;
+import { formatoDecimal, formatoEntero, textoPorcentaje } from "../utils/numeros";
+
+const plural = (n: number, singular: string, plural: string) => `${formatoEntero(n)} ${n === 1 ? singular : plural}`;
+
+/** "99,5 % del total" (el total son las alertas recibidas); undefined si no hay alertas. */
+const delTotal = (parte: number, total: number): string | undefined => {
+  const texto = textoPorcentaje(parte, total);
+  return texto === null ? undefined : `${texto} del total`;
+};
 
 export function SeccionAlertas({ resumen }: { resumen: ResumenGerencial }) {
   const a = resumen.alertas;
+  const criticas = a.porSeveridad.find((s) => s.severidad === 4)?.cantidad ?? 0;
 
   return (
     <section className="seccion" aria-labelledby="titulo-alertas">
@@ -26,17 +34,17 @@ export function SeccionAlertas({ resumen }: { resumen: ResumenGerencial }) {
         <TarjetaMetrica
           titulo="Sin atender"
           valor={a.sinAtender}
-          detalle={a.sinAtender === 0 ? "No hay alertas sin atender" : undefined}
+          detalle={a.sinAtender === 0 ? "No hay alertas sin atender" : delTotal(a.sinAtender, a.recibidas)}
         />
         <TarjetaMetrica
           titulo="Críticas y altas"
           valor={a.criticasYAltas}
-          detalle={a.criticasYAltas === 0 ? "No hay alertas críticas ni altas" : undefined}
+          detalle={a.criticasYAltas === 0 ? "No hay alertas críticas ni altas" : plural(criticas, "crítica", "críticas")}
         />
         <TarjetaMetrica
           titulo="Fuera de SLA"
           valor={a.fueraDeSla}
-          detalle={a.fueraDeSla === 0 ? "Ninguna fuera de plazo" : undefined}
+          detalle={a.fueraDeSla === 0 ? "Ninguna fuera de plazo" : delTotal(a.fueraDeSla, a.recibidas)}
         />
         <TarjetaMetrica
           titulo="Sin atender más antigua"
@@ -69,13 +77,13 @@ export function SeccionCasos({ resumen }: { resumen: ResumenGerencial }) {
           detalle={
             c.reportados === 0
               ? "Aún no hay incidentes"
-              : `${plural(c.abiertos, "abierto", "abiertos")} · ${c.enProgreso} en progreso · ${plural(c.cerrados, "cerrado", "cerrados")}`
+              : `${plural(c.abiertos, "abierto", "abiertos")} · ${formatoEntero(c.enProgreso)} en progreso · ${plural(c.cerrados, "cerrado", "cerrados")}`
           }
         />
         <TarjetaMetrica
           titulo="Alertas convertidas en caso"
-          valor={conv.porcentaje === null ? null : `${conv.convertidas} de ${conv.total}`}
-          sufijo={conv.porcentaje === null ? undefined : `(${porcentaje.format(conv.porcentaje)} %)`}
+          valor={conv.porcentaje === null ? null : `${formatoEntero(conv.convertidas)} de ${formatoEntero(conv.total)}`}
+          sufijo={conv.porcentaje === null ? undefined : `(${formatoDecimal(conv.porcentaje)} %)`}
           vacio="Aún no hay alertas"
         />
         <TarjetaMetrica

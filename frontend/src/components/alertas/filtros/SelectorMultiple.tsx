@@ -1,3 +1,4 @@
+import { formatoEntero } from "../../../utils/numeros";
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 
 export interface OpcionSeleccion<V> {
@@ -72,7 +73,7 @@ export function SelectorMultiple<V>({ titulo, opciones, seleccion, onCambiar }: 
             <label key={i} className="selector-multiple__opcion">
               <input type="checkbox" checked={seleccion.includes(o.valor)} onChange={() => alternar(o.valor)} />
               <span>
-                {o.etiqueta} ({o.cantidad})
+                {o.etiqueta} ({formatoEntero(o.cantidad)})
               </span>
             </label>
           ))}

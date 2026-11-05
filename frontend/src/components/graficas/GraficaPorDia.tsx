@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { ResumenAlertas } from "../../types/metricas";
 import { anchoRelativo, maximoDe, RANGO_POR_DEFECTO, RANGOS_DIAS, serieVisible, type RangoDias } from "../../utils/graficas";
 import { EstadoVacio } from "../ui/EstadoVacio";
+import { formatoEntero } from "../../utils/numeros";
 import { TarjetaGrafica } from "./TarjetaGrafica";
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
   ahora: number;
 }
 
-const alertasTexto = (n: number) => `${n} ${n === 1 ? "alerta" : "alertas"}`;
+const alertasTexto = (n: number) => `${formatoEntero(n)} ${n === 1 ? "alerta" : "alertas"}`;
 
 /** Barras verticales por día (hora de Bogotá). El número de cada día va encima de su barra. */
 export function GraficaPorDia({ alertas, ahora }: Props) {
@@ -58,7 +59,7 @@ export function GraficaPorDia({ alertas, ahora }: Props) {
               aria-label={`${d.fecha}${d.esHoy ? " (hoy)" : ""}: ${alertasTexto(d.cantidad)}`}
             >
               <span className="dia__valor" aria-hidden="true">
-                {d.cantidad}
+                {formatoEntero(d.cantidad)}
               </span>
               <span className="dia__pista" aria-hidden="true">
                 <span className="dia__barra" style={{ height: `${anchoRelativo(d.cantidad, maximo)}%` }} />

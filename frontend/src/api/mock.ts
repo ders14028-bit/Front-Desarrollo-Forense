@@ -37,12 +37,14 @@ export function crearFuenteMock(opciones: OpcionesMock = {}): FuenteDatos {
   return {
     async obtenerResumenGerencial() {
       await simularRed();
-      return calcularResumen(alertas, casos, tareas, ahora());
+      const resumen = calcularResumen(alertas, casos, tareas, ahora());
+      return { ...resumen, thehive: { respondio: true, consultadoEn: resumen.generadoEn } };
     },
 
     async listarAlertas() {
       await simularRed();
-      return construirListaAlertas(alertas, casos, ahora());
+      const lista = construirListaAlertas(alertas, casos, ahora());
+      return { ...lista, thehive: { respondio: true, consultadoEn: lista.generadoEn } };
     },
 
     async obtenerDetalleAlerta(id) {

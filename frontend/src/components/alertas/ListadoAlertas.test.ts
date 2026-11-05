@@ -157,8 +157,8 @@ describe("ListadoAlertas: casos especiales", () => {
       truncado: true,
       composicion: { recientes: 3, criticasYAltasAdicionales: 0 },
     });
-    expect(h).toContain("1500 alertas · últimos 30 días");
-    expect(h).toContain("Mostrando las 3 más recientes de 1500 en los últimos 30 días");
+    expect(h).toContain("1.500 alertas · últimos 30 días");
+    expect(h).toContain("Mostrando las 3 más recientes de 1.500 en los últimos 30 días");
   });
 
   it("si se añadieron críticas o altas sin atender más antiguas, el aviso lo dice", async () => {
@@ -170,7 +170,7 @@ describe("ListadoAlertas: casos especiales", () => {
       truncado: true,
       composicion: { recientes: 3, criticasYAltasAdicionales: 2 },
     });
-    expect(h).toContain("Mostrando las 3 alertas más recientes y, además, 2 críticas o altas sin atender más antiguas (de 1500 en los últimos 30 días)");
+    expect(h).toContain("Mostrando las 3 alertas más recientes y, además, 2 críticas o altas sin atender más antiguas (de 1.500 en los últimos 30 días)");
   });
 
   it("si la lista está completa no hay aviso", async () => {

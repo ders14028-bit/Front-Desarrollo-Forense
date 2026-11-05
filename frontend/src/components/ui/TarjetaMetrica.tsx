@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { formatoEntero } from "../../utils/numeros";
 import { EstadoVacio } from "./EstadoVacio";
 
 interface Props {
@@ -16,7 +17,9 @@ interface Props {
 }
 
 /** Tres filas (título · valor · pie) que la rejilla alinea entre tarjetas vecinas. */
-export function TarjetaMetrica({ titulo, valor, sufijo, detalle, vacio, nota }: Props) {
+export function TarjetaMetrica({ titulo, valor: valorCrudo, sufijo, detalle, vacio, nota }: Props) {
+  // Las cifras llevan separador de miles es-CO (23.261); los textos ya formateados se muestran tal cual.
+  const valor = typeof valorCrudo === "number" ? formatoEntero(valorCrudo) : valorCrudo;
   return (
     <article className="tarjeta">
       <h3 className="tarjeta__titulo">{titulo}</h3>
