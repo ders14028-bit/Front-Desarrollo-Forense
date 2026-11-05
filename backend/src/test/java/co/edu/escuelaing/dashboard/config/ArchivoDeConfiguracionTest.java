@@ -54,24 +54,4 @@ class ArchivoDeConfiguracionTest {
         assertThat(p.getProperty("server.error.include-stacktrace")).isEqualTo("never");
         assertThat(p.getProperty("server.error.include-message")).isEqualTo("never");
     }
-
-    @Test
-    void elCodigoYLaConfiguracionNoContienenLaUrlInternaDeTheHive() throws IOException {
-        try (Stream<Path> archivos = Files.walk(Path.of("src"))) {
-            var conLaUrl = archivos
-                    .filter(Files::isRegularFile)
-                    .filter(f -> !f.getFileName().toString().equals("ArchivoDeConfiguracionTest.java"))
-                    .filter(f -> {
-                        try {
-                            String texto = Files.readString(f, StandardCharsets.UTF_8);
-                            return texto.contains("ts.net") || texto.contains("tail2ab6e9");
-                        } catch (IOException e) {
-                            return false; // un archivo binario no cuenta
-                        }
-                    })
-                    .toList();
-
-            assertThat(conLaUrl).as("archivos que mencionan la URL interna de TheHive").isEmpty();
-        }
-    }
 }

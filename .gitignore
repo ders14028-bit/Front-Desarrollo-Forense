@@ -10,3 +10,7 @@
 
 # Contexto interno del backend: trae la URL de Tailscale y no debe publicarse
 docs/contexto-backend-thehive.md
+
+# Caché de Python (la crea importar los scripts de backend/scripts)
+__pycache__/
+*.pyc
