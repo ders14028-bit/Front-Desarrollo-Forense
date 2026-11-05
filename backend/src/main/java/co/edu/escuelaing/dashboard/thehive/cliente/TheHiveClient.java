@@ -144,6 +144,26 @@ public class TheHiveClient {
         }
     }
 
+    /** Ejecuta una consulta que termina en {@code count} y devuelve el total (siempre con count, nunca el largo de una lista). */
+    public long contar(ConsultaTheHive consulta) {
+        JsonNode respuesta = consultar(consulta);
+        if (!respuesta.isIntegralNumber()) {
+            throw new TheHiveRespuestaInvalidaException("TheHive no devolvió un número para un count.");
+        }
+        return respuesta.asLong();
+    }
+
+    /** Ejecuta una consulta que devuelve una lista (por ejemplo {@code page}) y entrega sus elementos. */
+    public java.util.List<JsonNode> listar(ConsultaTheHive consulta) {
+        JsonNode respuesta = consultar(consulta);
+        if (!respuesta.isArray()) {
+            throw new TheHiveRespuestaInvalidaException("TheHive no devolvió una lista.");
+        }
+        var elementos = new java.util.ArrayList<JsonNode>(respuesta.size());
+        respuesta.forEach(elementos::add);
+        return elementos;
+    }
+
     /**
      * Agregación por campo. Si TheHive devuelve tantos valores como se pidieron (llegó al tope) se registra una
      * advertencia y {@link ResultadoAgregacion#truncada()} queda en {@code true}: no se trunca en silencio.

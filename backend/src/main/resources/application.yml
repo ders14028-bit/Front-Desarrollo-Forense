@@ -42,3 +42,14 @@ dashboard:
     alta: 30
     media: 120
     baja: 240
+  # Nombres de TheHive de las reglas de negocio. Los marcados PENDIENTE hay que confirmarlos con el grupo de TheHive.
+  negocio:
+    grupo-contencion: Contención            # PENDIENTE confirmar
+    estado-caso-confirmado: TruePositive    # PENDIENTE confirmar
+    estado-tarea-completada: Completed      # PENDIENTE confirmar
+    etapa-caso-nuevo: New                   # PENDIENTE confirmar
+    etapa-caso-en-progreso: InProgress      # PENDIENTE confirmar
+    etapa-caso-cerrado: Closed              # PENDIENTE confirmar
+    tipo-simulacion: simulacion             # las alertas con este type se excluyen (filtro _ne type)
+    etiqueta-laboratorio: simulacion        # tag que activa el aviso "Datos de laboratorio"
+    incluir-simulaciones: false

@@ -77,6 +77,7 @@ Nunca se registran cabeceras ni la key. El cuerpo de cada consulta solo aparece 
 | Ruta | Estado |
 |---|---|
 | `GET /api/dashboard/configuracion` | listo |
-| `GET /api/dashboard/resumen`, `/alertas`, `/alertas/{id}` | pendientes (pasos siguientes) |
+| `GET /api/dashboard/resumen` | listo (se calcula al pedirlo y se reutiliza 10 s; 503 si TheHive no responde, hasta el paso 6) |
+| `GET /api/dashboard/alertas`, `/alertas/{id}` | pendientes (pasos siguientes) |
 
 Toda la API es de solo `GET`; hay un test que falla si aparece otro método.
