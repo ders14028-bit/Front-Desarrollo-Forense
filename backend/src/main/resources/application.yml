@@ -1,0 +1,39 @@
+# Toda la configuración sensible sale de variables de entorno. Nada de esto contiene secretos.
+spring:
+  application:
+    name: dashboard-soc-backend
+  main:
+    banner-mode: off
+  mvc:
+    log-request-details: false
+
+server:
+  # Solo escucha en la máquina local, salvo que se indique otra dirección (SERVER_ADDRESS).
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: application/json
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+dashboard:
+  thehive:
+    url: ${THEHIVE_URL:}                      # obligatoria, por ejemplo https://servidor:puerto
+    api-key: ${THEHIVE_API_KEY:}              # obligatoria; NUNCA en este archivo
+    organizacion: ${THEHIVE_ORG:escuelaing}   # fija: se envía en X-Organisation y el frontend no puede cambiarla
+  cors:
+    origenes: ${DASHBOARD_ORIGINS:http://localhost:5173}   # varios, separados por comas
+  # SLA de atención en minutos por severidad (CLAUDE.md). Se expone en GET /api/dashboard/configuracion.
+  sla-minutos:
+    critica: 15
+    alta: 30
+    media: 120
+    baja: 240
