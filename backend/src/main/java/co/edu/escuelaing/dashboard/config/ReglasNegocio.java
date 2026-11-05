@@ -13,13 +13,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param etapaCasoEnProgreso     {@code stage} de un caso en progreso (PENDIENTE confirmar)
  * @param etapaCasoCerrado        {@code stage} de un caso cerrado (PENDIENTE confirmar)
  * @param tipoSimulacion          {@code type} de las alertas simuladas por los playbooks
- * @param etiquetaLaboratorio     tag de los datos de prueba; si hay alertas o casos con él se muestra "Datos de laboratorio"
  * @param incluirSimulaciones     {@code false} (por defecto): las alertas con {@code type = tipoSimulacion} se excluyen de todo
  */
 @ConfigurationProperties(prefix = "dashboard.negocio")
 public record ReglasNegocio(String grupoContencion, String estadoCasoConfirmado, String estadoTareaCompletada,
                             String etapaCasoNuevo, String etapaCasoEnProgreso, String etapaCasoCerrado,
-                            String tipoSimulacion, String etiquetaLaboratorio, boolean incluirSimulaciones) {
+                            String tipoSimulacion, boolean incluirSimulaciones) {
 
     public ReglasNegocio {
         grupoContencion = valor(grupoContencion, "Contención");
@@ -29,7 +28,6 @@ public record ReglasNegocio(String grupoContencion, String estadoCasoConfirmado,
         etapaCasoEnProgreso = valor(etapaCasoEnProgreso, "InProgress");
         etapaCasoCerrado = valor(etapaCasoCerrado, "Closed");
         tipoSimulacion = valor(tipoSimulacion, "simulacion");
-        etiquetaLaboratorio = valor(etiquetaLaboratorio, "simulacion");
     }
 
     private static String valor(String texto, String pordefecto) {

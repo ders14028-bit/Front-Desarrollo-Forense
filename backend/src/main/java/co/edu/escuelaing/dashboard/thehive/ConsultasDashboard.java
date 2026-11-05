@@ -31,6 +31,21 @@ public class ConsultasDashboard {
         return conFiltros(ConsultaTheHive.listAlert(), todos);
     }
 
+    /**
+     * Cuántas alertas de la consulta son simulación ({@code type = tipoSimulacion}, el mismo criterio del filtro
+     * {@code _ne}). Si las simulaciones están excluidas no puede haber ninguna: devuelve 0 sin consultar.
+     */
+    public ConsultaTheHive alertasSimuladas(Filtro... filtros) {
+        List<Filtro> todos = new ArrayList<>(List.of(filtros));
+        todos.add(Filtro.eq("type", reglas.tipoSimulacion()));
+        return conFiltros(ConsultaTheHive.listAlert(), todos);
+    }
+
+    /** {@code true} si las simulaciones entran en las cifras (por configuración). */
+    public boolean incluyeSimulaciones() {
+        return reglas.incluirSimulaciones();
+    }
+
     /** Casos con los filtros indicados (los casos no tienen {@code type}: no se filtran simulaciones). */
     public ConsultaTheHive casos(Filtro... filtros) {
         return conFiltros(ConsultaTheHive.listCase(), List.of(filtros));

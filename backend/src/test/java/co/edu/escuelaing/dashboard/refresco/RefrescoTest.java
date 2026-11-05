@@ -170,7 +170,7 @@ class RefrescoTest {
     void preparar() {
         hive = new TheHiveEnMemoria();
         reloj = new RelojAjustable();
-        var reglas = new ReglasNegocio(null, null, null, null, null, null, null, null, false);
+        var reglas = new ReglasNegocio(null, null, null, null, null, null, null, false);
         var cliente = new TheHiveClient(new ConfiguracionTheHive(hive.url(), "CLAVE-DE-PRUEBA", "escuelaing-prueba"),
                 new LimitesTheHive(Duration.ofSeconds(2), Duration.ofSeconds(10), null, null), JSON);
         var consultas = new ConsultasDashboard(reglas);
@@ -178,7 +178,7 @@ class RefrescoTest {
         var tacticas = new TacticasPorRegla(reloj);
         var resumen = new ResumenService(cliente, sla, reglas, reloj, new ConteosPorDia(), tacticas,
                 new MuestreoDeTacticas(cliente, consultas, tacticas), consultas);
-        var alertas = new AlertasService(cliente, consultas, sla, reglas, tacticas, reloj, JSON);
+        var alertas = new AlertasService(cliente, consultas, sla, tacticas, reloj, JSON);
         tablero = new TableroEnSegundoPlano(resumen, alertas, reloj, new ConfiguracionRefresco(Duration.ofSeconds(30), Duration.ofMillis(100)));
         hive.alertas.add(alerta("~1", T - 60_000, 4, "New", "wazuh", "wazuh", "x", "wazuh"));
     }

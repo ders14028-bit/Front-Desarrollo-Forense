@@ -55,7 +55,6 @@ dashboard:
     etapa-caso-en-progreso: InProgress      # PENDIENTE confirmar
     etapa-caso-cerrado: Closed              # PENDIENTE confirmar
     tipo-simulacion: simulacion             # las alertas con este type se excluyen (filtro _ne type)
-    etiqueta-laboratorio: simulacion        # tag que activa el aviso "Datos de laboratorio"
     incluir-simulaciones: false
   # Refresco en segundo plano: el frontend pide cada 30 s y se le sirve desde memoria.
   refresco:

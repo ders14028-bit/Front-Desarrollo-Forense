@@ -49,7 +49,7 @@ class AlertasServiceTest {
         hive = new TheHiveEnMemoria();
         Clock reloj = Clock.fixed(Instant.ofEpochMilli(T), ZoneOffset.UTC);
         tacticas = new TacticasPorRegla(reloj);
-        servicio = nuevo(reloj, new ReglasNegocio(null, null, null, null, null, null, null, null, false));
+        servicio = nuevo(reloj, new ReglasNegocio(null, null, null, null, null, null, null, false));
     }
 
     @AfterEach
@@ -60,7 +60,7 @@ class AlertasServiceTest {
     private AlertasService nuevo(Clock reloj, ReglasNegocio reglas) {
         var cliente = new TheHiveClient(new ConfiguracionTheHive(hive.url(), "CLAVE-DE-PRUEBA", "escuelaing-prueba"),
                 new LimitesTheHive(Duration.ofSeconds(2), Duration.ofSeconds(10), null, null), JSON);
-        return new AlertasService(cliente, new ConsultasDashboard(reglas), new SlaMinutos(15, 30, 120, 240), reglas, tacticas, reloj, JSON);
+        return new AlertasService(cliente, new ConsultasDashboard(reglas), new SlaMinutos(15, 30, 120, 240), tacticas, reloj, JSON);
     }
 
     private static com.fasterxml.jackson.databind.node.ObjectNode a(String id, long creada, int sev, String estado, String... tags) {
@@ -111,10 +111,13 @@ class AlertasServiceTest {
     }
 
     @Test
-    void unaAlertaConTagDeLaboratorioActivaElAviso() {
-        hive.alertas.add(alerta("~1", T - MIN, 1, "New", "wazuh", "external", "x", "simulacion"));
+    void unaAlertaConTagSimulacionPeroTypeWazuhNoActivaElAviso() {
+        hive.alertas.add(alerta("~1", T - MIN, 1, "New", "wazuh", "wazuh", "x", "simulacion"));
 
-        assertThat(servicio.calcularLista().datosDeLaboratorio()).isTrue();
+        ListaAlertas lista = servicio.calcularLista();
+
+        assertThat(lista.total()).isEqualTo(1);
+        assertThat(lista.datosDeLaboratorio()).isFalse();
     }
 
     @Test

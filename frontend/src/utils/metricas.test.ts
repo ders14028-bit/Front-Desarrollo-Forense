@@ -335,9 +335,13 @@ describe("calcularResumen: contenciones", () => {
 });
 
 describe("calcularResumen: datos de laboratorio", () => {
-  it("se marca si hay alertas o casos con el tag simulacion", () => {
-    expect(calcularResumen([alerta({ tags: ["simulacion"] })], [], [], AHORA).datosDeLaboratorio).toBe(true);
-    expect(calcularResumen([], [caso({ tags: ["simulacion"] })], [], AHORA).datosDeLaboratorio).toBe(true);
+  it("se marca si hay alertas con type simulacion", () => {
+    expect(calcularResumen([alerta({ type: "simulacion" })], [], [], AHORA).datosDeLaboratorio).toBe(true);
+  });
+
+  it("una alerta con la etiqueta simulacion pero type wazuh NO se marca (ni un caso con la etiqueta)", () => {
+    const real = alerta({ type: "wazuh", tags: ["simulacion"] });
+    expect(calcularResumen([real], [caso({ tags: ["simulacion"] })], [], AHORA).datosDeLaboratorio).toBe(false);
   });
 
   it("no se marca si no hay datos de prueba", () => {

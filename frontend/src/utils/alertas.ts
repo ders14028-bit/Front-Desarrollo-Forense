@@ -1,4 +1,4 @@
-import { SLA_MINUTOS, TAG_LABORATORIO, TOPE_ALERTAS, VENTANA_ALERTAS_DIAS } from "../config";
+import { SLA_MINUTOS, TIPO_SIMULACION, TOPE_ALERTAS, VENTANA_ALERTAS_DIAS } from "../config";
 import type { Alerta } from "../types/alerta";
 import type { Caso } from "../types/caso";
 import type { AlertaFila, CasoDetalle, DetalleAlerta, ListaAlertas } from "../types/listaAlertas";
@@ -83,7 +83,7 @@ export function construirListaAlertas(
     total: enVentana.length,
     truncado: enVentana.length > incluidas.length,
     composicion: { recientes: recientes.length, criticasYAltasAdicionales: adicionales.length },
-    datosDeLaboratorio: enVentana.some((a) => a.tags.includes(TAG_LABORATORIO)) || casos.some((c) => c.tags.includes(TAG_LABORATORIO)),
+    datosDeLaboratorio: enVentana.some((a) => a.type === TIPO_SIMULACION),
     alertas: incluidas.map((a) => filaDesde(a, casoPorId, ahora)),
   };
 }

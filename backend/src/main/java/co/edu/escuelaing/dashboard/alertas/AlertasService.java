@@ -3,7 +3,6 @@ package co.edu.escuelaing.dashboard.alertas;
 import co.edu.escuelaing.dashboard.alertas.ListaAlertas.AlertaFila;
 import co.edu.escuelaing.dashboard.alertas.ListaAlertas.CasoResumen;
 import co.edu.escuelaing.dashboard.alertas.ListaAlertas.Composicion;
-import co.edu.escuelaing.dashboard.config.ReglasNegocio;
 import co.edu.escuelaing.dashboard.config.SlaMinutos;
 import co.edu.escuelaing.dashboard.dominio.Alerta;
 import co.edu.escuelaing.dashboard.dominio.Caso;
@@ -66,17 +65,15 @@ public class AlertasService {
     private final TheHiveClient thehive;
     private final ConsultasDashboard consultas;
     private final SlaMinutos sla;
-    private final ReglasNegocio reglas;
     private final TacticasPorRegla tacticas;
     private final Clock reloj;
     private final ObjectMapper mapper;
 
-    public AlertasService(TheHiveClient thehive, ConsultasDashboard consultas, SlaMinutos sla, ReglasNegocio reglas,
+    public AlertasService(TheHiveClient thehive, ConsultasDashboard consultas, SlaMinutos sla,
                           TacticasPorRegla tacticas, Clock reloj, ObjectMapper mapper) {
         this.thehive = thehive;
         this.consultas = consultas;
         this.sla = sla;
-        this.reglas = reglas;
         this.tacticas = tacticas;
         this.reloj = reloj;
         this.mapper = mapper;
@@ -94,9 +91,9 @@ public class AlertasService {
                 Filtro.lt("_createdAt", ahora + 1));
 
         var total = async(() -> thehive.contar(consultas.alertas(ventana).count()));
-        var alertasDeLaboratorio = async(() -> thehive.contar(
-                consultas.alertas(ventana, Filtro.eq("tags", reglas.etiquetaLaboratorio())).count()));
-        var casosDeLaboratorio = async(() -> thehive.contar(consultas.casos(Filtro.eq("tags", reglas.etiquetaLaboratorio())).count()));
+        // Laboratorio = hay alertas con type = simulacion (el mismo criterio del filtro). La etiqueta no cuenta.
+        var alertasDeLaboratorio = async(() -> consultas.incluyeSimulaciones()
+                ? thehive.contar(consultas.alertasSimuladas(ventana).count()) : 0L);
         List<Alerta> recientes = thehive.listar(
                         consultas.alertas(ventana).sort("_createdAt", Orden.DESCENDENTE).page(0, TOPE_RECIENTES))
                 .stream().map(Alerta::desde).toList();
@@ -112,7 +109,7 @@ public class AlertasService {
         Map<String, CasoResumen> casos = casosDe(todas);
         List<AlertaFila> filas = todas.stream().map(a -> fila(a, ahora, casos)).toList();
 
-        boolean laboratorio = esperar(alertasDeLaboratorio) > 0 || esperar(casosDeLaboratorio) > 0;
+        boolean laboratorio = esperar(alertasDeLaboratorio) > 0;
         return new ListaAlertas(ahora, nTotal, nTotal > filas.size(), laboratorio,
                 new Composicion(recientes.size(), adicionales.size()), new EstadoTheHive(true, ahora), filas);
     }

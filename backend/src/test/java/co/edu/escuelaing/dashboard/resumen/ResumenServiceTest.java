@@ -98,7 +98,7 @@ class ResumenServiceTest {
     }
 
     private static ReglasNegocio reglas(boolean incluirSimulaciones) {
-        return new ReglasNegocio(null, null, null, null, null, null, null, null, incluirSimulaciones);
+        return new ReglasNegocio(null, null, null, null, null, null, null, incluirSimulaciones);
     }
 
     private static String descripcionDeRegla(String regla) {
@@ -292,17 +292,17 @@ class ResumenServiceTest {
     }
 
     @Test
-    void unaAlertaConElTagSimulacionActivaElAviso() {
-        hive.alertas.add(alerta("~1", T - MIN, 2, "New", "wazuh", "external", "x", "wazuh", "simulacion"));
+    void unaAlertaConTagSimulacionPeroTypeWazuhNoActivaElAviso() {
+        hive.alertas.add(alerta("~1", T - MIN, 2, "New", "wazuh", "wazuh", "x", "wazuh", "simulacion"));
 
-        assertThat(servicio.calcular().datosDeLaboratorio()).isTrue();
+        assertThat(servicio.calcular().datosDeLaboratorio()).isFalse();
     }
 
     @Test
-    void unCasoConElTagSimulacionActivaElAviso() {
+    void unCasoConElTagSimulacionNoActivaElAviso() {
         hive.casos.add(caso("~c1", T - DIA, "New", "New", null, "simulacion"));
 
-        assertThat(servicio.calcular().datosDeLaboratorio()).isTrue();
+        assertThat(servicio.calcular().datosDeLaboratorio()).isFalse();
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -625,7 +625,7 @@ class ResumenServiceTest {
     void losNombresDeContencionYTruePositiveSalenDeLaConfiguracion() {
         hive.tareas.add(tarea("~t1", "Containment", "Done"));
         hive.casos.add(caso("~c1", T - DIA, "Cerrado", "Confirmado", T));
-        var propias = nuevoServicio(new ReglasNegocio("Containment", "Confirmado", "Done", null, null, "Cerrado", null, null, false));
+        var propias = nuevoServicio(new ReglasNegocio("Containment", "Confirmado", "Done", null, null, "Cerrado", null, false));
 
         var c = propias.calcular().casos();
 

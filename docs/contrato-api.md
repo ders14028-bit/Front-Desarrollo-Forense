@@ -46,7 +46,7 @@ Datos ya agregados para la Vista gerencial.
 ```ts
 interface ResumenGerencial {
   generadoEn: number;            // instante en que se calculó
-  datosDeLaboratorio: boolean;   // true si hay alertas o casos con el tag "simulacion" (el frontend muestra UN aviso general)
+  datosDeLaboratorio: boolean;   // true solo si hay alertas con type = "simulacion" (la etiqueta no cuenta) (el frontend muestra UN aviso general)
   alertas: ResumenAlertas;
   casos: ResumenCasos;
 }
@@ -103,7 +103,7 @@ interface ListaAlertas {
   truncado: boolean;           // true si total > alertas.length (alguna alerta de la ventana no viene)
   composicion: { recientes: number; criticasYAltasAdicionales: number };   // recientes: hasta 1000; adicionales: críticas/altas sin atender más antiguas que esas
   thehive: EstadoTheHive;      // ver cambio B
-  datosDeLaboratorio: boolean; // true si hay alertas de la lista o casos con el tag "simulacion"
+  datosDeLaboratorio: boolean; // true solo si hay alertas de la lista con type = "simulacion"
   alertas: AlertaFila[];
 }
 
@@ -343,6 +343,6 @@ interface EstadoTheHive {
 - Unidad de `timeToDetect` (segundos, minutos…).
 - Si TheHive guarda la fecha exacta en que una alerta se convirtió en caso. Mientras no, la línea de
   tiempo del frontend usa `_createdAt` del caso como fecha de la conversión.
-- Que las alertas y casos de prueba lleven el tag `simulacion` (de él depende `datosDeLaboratorio`).
+- Que las alertas de prueba tengan `type = simulacion` (de él depende `datosDeLaboratorio`).
 - Formato exacto de las rutas de los enlaces "Abrir en TheHive" (`frontend/src/config/index.ts`). La URL base
   no está en el código: sale de `VITE_THEHIVE_URL` y, sin ella, el frontend no muestra los enlaces.

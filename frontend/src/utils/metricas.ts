@@ -1,4 +1,4 @@
-import { ESTADO_CONFIRMADO, GRUPO_CONTENCION, SLA_MINUTOS, TAG_LABORATORIO } from "../config";
+import { ESTADO_CONFIRMADO, GRUPO_CONTENCION, SLA_MINUTOS, TIPO_SIMULACION } from "../config";
 import type { Alerta, Severidad } from "../types/alerta";
 import type { Caso } from "../types/caso";
 import type { ConteoPorOrigen, ConteoPorTipo, ResumenAlertas, ResumenCasos, ResumenGerencial } from "../types/metricas";
@@ -96,10 +96,9 @@ function resumirCasos(alertas: Alerta[], casos: Caso[], tareas: Tarea[]): Resume
 
 /** Calcula el resumen gerencial. Función pura: no lee el reloj; `ahora` (ms) se pasa siempre. */
 export function calcularResumen(alertas: Alerta[], casos: Caso[], tareas: Tarea[], ahora: number): ResumenGerencial {
-  const esDePrueba = (x: { tags: string[] }) => x.tags.includes(TAG_LABORATORIO);
   return {
     generadoEn: ahora,
-    datosDeLaboratorio: alertas.some(esDePrueba) || casos.some(esDePrueba),
+    datosDeLaboratorio: alertas.some((a) => a.type === TIPO_SIMULACION),
     alertas: resumirAlertas(alertas, ahora),
     casos: resumirCasos(alertas, casos, tareas),
   };

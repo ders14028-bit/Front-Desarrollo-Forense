@@ -98,6 +98,23 @@ try {
     Escribir-Ok 'Java, Maven Wrapper y npm disponibles'
 
     # ------------------------------------------------------------------------------------------------------------
+    Escribir-Paso 'Comprobando que los puertos esten libres'
+    $ocupados = @()
+    foreach ($par in @(@('backend', $PuertoBackend), @('frontend', $PuertoFrontend))) {
+        $conexiones = @(Get-NetTCPConnection -State Listen -LocalPort $par[1] -ErrorAction SilentlyContinue)
+        foreach ($pidDueno in ($conexiones | Select-Object -ExpandProperty OwningProcess -Unique)) {
+            $proceso = Get-Process -Id $pidDueno -ErrorAction SilentlyContinue
+            $nombreProceso = if ($proceso) { $proceso.ProcessName } else { 'desconocido' }
+            $ocupados += "Puerto $($par[1]) ($($par[0])) en uso por el proceso '$nombreProceso' (PID $pidDueno)."
+        }
+    }
+    if ($ocupados.Count -gt 0) {
+        $ocupados | ForEach-Object { Write-Host "   $_" -ForegroundColor Yellow }
+        throw 'Hay puertos ocupados. No se ha cerrado ningun proceso: cierralo tu (por ejemplo, la ventana anterior "Backend SOC" o "Frontend SOC") y vuelve a ejecutar el script.'
+    }
+    Escribir-Ok "Puertos $PuertoBackend y $PuertoFrontend libres"
+
+    # ------------------------------------------------------------------------------------------------------------
     Escribir-Paso 'Datos de TheHive'
     $url = $env:THEHIVE_URL
     if ([string]::IsNullOrWhiteSpace($url)) {

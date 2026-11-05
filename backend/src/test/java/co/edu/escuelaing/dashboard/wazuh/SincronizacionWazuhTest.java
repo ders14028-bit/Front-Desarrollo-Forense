@@ -74,7 +74,7 @@ class SincronizacionWazuhTest {
     }
 
     private SincronizacionWazuh nueva(int tamanoPagina) {
-        var reglas = new ReglasNegocio(null, null, null, null, null, null, null, null, false);
+        var reglas = new ReglasNegocio(null, null, null, null, null, null, null, false);
         var cliente = new TheHiveClient(new ConfiguracionTheHive(hive.url(), "CLAVE-DE-PRUEBA", "escuelaing-prueba"),
                 new LimitesTheHive(Duration.ofSeconds(2), Duration.ofSeconds(10), null, null), JSON);
         return new SincronizacionWazuh(cliente, new ConsultasDashboard(reglas),

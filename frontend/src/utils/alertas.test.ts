@@ -241,10 +241,14 @@ describe("construirListaAlertas", () => {
     expect(lista.composicion).toEqual({ recientes: 1, criticasYAltasAdicionales: 1 });
   });
 
-  it("marca datos de laboratorio si hay alertas o casos con el tag simulacion", () => {
-    expect(construirListaAlertas([alerta({ tags: ["simulacion"] })], [], AHORA).datosDeLaboratorio).toBe(true);
-    expect(construirListaAlertas([alerta()], [caso({ tags: ["simulacion"] })], AHORA).datosDeLaboratorio).toBe(true);
+  it("marca datos de laboratorio solo si hay alertas con type simulacion", () => {
+    expect(construirListaAlertas([alerta({ type: "simulacion" })], [], AHORA).datosDeLaboratorio).toBe(true);
     expect(construirListaAlertas([alerta()], [caso()], AHORA).datosDeLaboratorio).toBe(false);
+  });
+
+  it("una alerta con la etiqueta simulacion pero type wazuh NO es de laboratorio", () => {
+    const real = alerta({ type: "wazuh", tags: ["simulacion"] });
+    expect(construirListaAlertas([real], [caso({ tags: ["simulacion"] })], AHORA).datosDeLaboratorio).toBe(false);
   });
 
   it("sin alertas: lista vacía y sin truncar", () => {

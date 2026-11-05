@@ -132,8 +132,9 @@ public class ResumenService {
         }
 
         // --- aviso de laboratorio y casos ---
-        var alertasDeLaboratorio = async(() -> thehive.contar(alertas(hasta, Filtro.eq("tags", reglas.etiquetaLaboratorio())).count()));
-        var casosDeLaboratorio = async(() -> thehive.contar(casos(Filtro.eq("tags", reglas.etiquetaLaboratorio())).count()));
+        // Laboratorio = hay alertas con type = simulacion (el mismo criterio del filtro). La etiqueta no cuenta.
+        var alertasDeLaboratorio = async(() -> consultas.incluyeSimulaciones()
+                ? thehive.contar(consultas.alertasSimuladas(hasta).count()) : 0L);
         var reportados = async(() -> thehive.contar(casos().count()));
         var abiertos = async(() -> thehive.contar(casos(Filtro.eq("stage", reglas.etapaCasoNuevo())).count()));
         var enProgreso = async(() -> thehive.contar(casos(Filtro.eq("stage", reglas.etapaCasoEnProgreso())).count()));
@@ -170,7 +171,7 @@ public class ResumenService {
                 esperar(contenciones), esperar(confirmados),
                 nCerrados == 0 ? null : tiempoPromedioDeCierre());
 
-        boolean laboratorio = esperar(alertasDeLaboratorio) > 0 || esperar(casosDeLaboratorio) > 0;
+        boolean laboratorio = esperar(alertasDeLaboratorio) > 0;
         return new ResumenGerencial(ahora, laboratorio, alertasResumen, casosResumen, new EstadoTheHive(true, ahora));
     }
 

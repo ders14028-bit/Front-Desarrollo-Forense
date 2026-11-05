@@ -17,10 +17,11 @@ export const ESTADO_CONFIRMADO = "TruePositive";
 export const ESTADO_FALSO_POSITIVO = "FalsePositive";
 
 /**
- * Tag que marca los datos de prueba; si hay alertas o casos con él, se muestra el aviso "Datos de laboratorio".
- * PENDIENTE: confirmar que las alertas y casos de prueba de TheHive llevan este tag.
+ * `type` de las alertas de prueba. Es el mismo criterio que usa el backend para excluirlas: una alerta es
+ * simulación SOLO si su `type` es este (la etiqueta "simulacion" no cuenta). Si la respuesta trae alguna,
+ * se muestra el aviso "Datos de laboratorio".
  */
-export const TAG_LABORATORIO = "simulacion";
+export const TIPO_SIMULACION = "simulacion";
 
 /**
  * Nombres legibles de escenarios (etiqueta `escenario:<clave>`) y herramientas (`source`) cuyo

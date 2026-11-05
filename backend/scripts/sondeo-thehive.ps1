@@ -20,7 +20,11 @@
   Remove-Item Env:THEHIVE_API_KEY
 #>
 [CmdletBinding()]
-param([int]$TimeoutSegundos = 60)
+param(
+    [int]$TimeoutSegundos = 60,
+    # IPs a comprobar en la sonda N (por ejemplo las del "Top IPs"). Nunca se imprimen: solo se numeran (IP 1, IP 2...).
+    [string[]]$Ips = @()
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -514,6 +518,52 @@ Sonda "L. SLA nativo de TheHive (slaStates.status) - opcional" {
     } else {
         Linea (Texto-Resultado $r)
         $S["L_sla_nativo"] = "NO " + $r.Codigo + " " + (Tipo-De-Error $r)
+    }
+}
+
+# ===============================================================================================================
+Sonda "N. Top IPs: ¿hay alertas duplicadas? (solo números; las IPs no se imprimen)" {
+    $conWazuh = Y @($SinSim, (Eq "type" "wazuh"))
+    $total = Contar-Alertas $conWazuh
+    Linea ("alertas type=wazuh (todas)                : " + (Texto-Resultado $total))
+    $S["N_wazuh_total"] = $(if ($null -ne (Numero $total)) { Fmt (Numero $total) } else { "?" })
+
+    # Duplicados por sourceRef: si una misma sourceRef aparece más de una vez, TheHive guarda alertas repetidas.
+    $aggRef = Consulta @(@{ _name = "listAlert" }, (Paso "filter" $conWazuh),
+        (Paso "aggregation" @{ _agg = "field"; _field = "sourceRef"; _select = @(@{ _agg = "count" }); _size = 500 }))
+    if (Es-Exito $aggRef) {
+        $b = @(Buckets $aggRef | Where-Object { $_.Clave -ne "_total" })
+        $max = ($b | Measure-Object N -Maximum).Maximum
+        $rep = @($b | Where-Object { $_.N -gt 1 }).Count
+        Linea ("sourceRef: $($b.Count) valores revisados (tope 500), el que más se repite aparece $(Fmt $max) vez/veces, $rep repetidos")
+        $S["N_sourceRef_max_repeticion"] = Fmt $max
+    } else { Linea ("sourceRef: " + (Texto-Resultado $aggRef)) }
+
+    $validas = @($Ips | Where-Object { $_ -match '^\d{1,3}(\.\d{1,3}){3}$' })
+    if ($validas.Count -eq 0) {
+        Linea "Sin IPs: ejecuta el sondeo con -Ips '1.2.3.4','1.2.3.5' para contar las alertas de cada IP."
+    }
+    $i = 0
+    foreach ($ip in $validas) {
+        $i++
+        $filtroIp = Como "description" ('*"' + $ip + '"*')
+        $n = Contar-Alertas (Y @($conWazuh, $filtroIp))
+        Linea ("IP $i : alertas cuya descripcion la contiene : " + (Texto-Resultado $n))
+        $S["N_ip_$i"] = $(if ($null -ne (Numero $n)) { Fmt (Numero $n) } else { "?" })
+        $agg = Consulta @(@{ _name = "listAlert" }, (Paso "filter" (Y @($conWazuh, $filtroIp))),
+            (Paso "aggregation" @{ _agg = "field"; _field = "sourceRef"; _select = @(@{ _agg = "count" }); _size = 500 }))
+        if (Es-Exito $agg) {
+            $bb = @(Buckets $agg | Where-Object { $_.Clave -ne "_total" })
+            $mx = ($bb | Measure-Object N -Maximum).Maximum
+            Linea ("IP $i : sourceRef distintas (tope 500)         : $($bb.Count), maximo de repeticiones $(Fmt $mx)")
+        }
+    }
+    # Alertas que mencionan a la vez dos de las IPs: si fueran muchas, una misma alerta se contaria para ambas.
+    for ($a = 0; $a -lt $validas.Count; $a++) {
+        for ($c = $a + 1; $c -lt $validas.Count; $c++) {
+            $juntas = Contar-Alertas (Y @($conWazuh, (Como "description" ('*"' + $validas[$a] + '"*')), (Como "description" ('*"' + $validas[$c] + '"*'))))
+            Linea ("alertas que contienen a la vez IP $($a + 1) e IP $($c + 1) : " + (Texto-Resultado $juntas))
+        }
     }
 }
 
