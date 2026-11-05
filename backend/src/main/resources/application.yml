@@ -1,5 +1,9 @@
 # Toda la configuración sensible sale de variables de entorno. Nada de esto contiene secretos.
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 3   # la carga inicial de Wazuh puede tardar y no debe frenar el refresco del resumen
   application:
     name: dashboard-soc-backend
   main:
@@ -53,3 +57,15 @@ dashboard:
     tipo-simulacion: simulacion             # las alertas con este type se excluyen (filtro _ne type)
     etiqueta-laboratorio: simulacion        # tag que activa el aviso "Datos de laboratorio"
     incluir-simulaciones: false
+  # Refresco en segundo plano: el frontend pide cada 30 s y se le sirve desde memoria.
+  refresco:
+    intervalo: 30s              # entre el fin de un refresco y el inicio del siguiente
+    espera-primera-carga: 20s   # una petición que llega antes del primer dato espera hasta esto; luego 503
+    activo: true                # false apaga el refresco (lo usan las pruebas de la API)
+  # Métricas de Wazuh: alertas de los últimos días guardadas en memoria (se leen del bloque JSON de la descripción).
+  wazuh:
+    dias-ventana: 7
+    tamano-pagina: 500          # alertas por página en la carga inicial y en las sincronizaciones
+    solape: 60s                 # en cada sincronización se retrocede esto desde la última alerta vista
+    top-n: 10                   # tamaño de los rankings (IPs, usuarios, reglas, técnicas)
+    tipo-alerta: wazuh          # type de las alertas que vienen de Wazuh

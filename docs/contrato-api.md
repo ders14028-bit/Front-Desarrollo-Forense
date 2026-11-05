@@ -33,6 +33,7 @@ Las reglas de negocio están en `CLAUDE.md`; este documento solo fija la forma d
 | GET | `/api/dashboard/resumen` | `ResumenGerencial` |
 | GET | `/api/dashboard/alertas` | `ListaAlertas` |
 | GET | `/api/dashboard/alertas/{id}` | `DetalleAlerta` (`404` si la alerta no existe) |
+| GET | `/api/dashboard/wazuh` | `MetricasWazuh` (métricas de Wazuh de los últimos 7 días) |
 
 `{id}` es el `_id` de TheHive (por ejemplo `~4513920`); el frontend lo codifica como segmento de URL.
 
@@ -89,7 +90,9 @@ Notas:
 
 ## 2. `GET /api/dashboard/alertas` → `ListaAlertas`
 
-Alertas de los **últimos 30 días** (hoy y los 29 días anteriores, en Bogotá), de la más reciente a
+Las **1000 alertas más recientes de los últimos 30 días** (hoy y los 29 días anteriores, en Bogotá) **más todas las
+críticas y altas sin atender** de esa ventana, aunque sean más antiguas (así una crítica sin atender nunca queda fuera por el
+tope). De la más reciente a
 la más antigua, con un **tope de 1000**. No recibe parámetros: el filtrado, el orden y la
 paginación (de 25 en 25) los hace el frontend.
 
@@ -97,7 +100,9 @@ paginación (de 25 en 25) los hace el frontend.
 interface ListaAlertas {
   generadoEn: number;
   total: number;               // alertas dentro de la ventana, ANTES del tope
-  truncado: boolean;           // true si total > 1000 y solo vienen las 1000 más recientes
+  truncado: boolean;           // true si total > alertas.length (alguna alerta de la ventana no viene)
+  composicion: { recientes: number; criticasYAltasAdicionales: number };   // recientes: hasta 1000; adicionales: críticas/altas sin atender más antiguas que esas
+  thehive: EstadoTheHive;      // ver cambio B
   datosDeLaboratorio: boolean; // true si hay alertas de la lista o casos con el tag "simulacion"
   alertas: AlertaFila[];
 }
@@ -109,7 +114,7 @@ interface AlertaFila {
   severidad: 1 | 2 | 3 | 4;    // 1 baja, 2 media, 3 alta, 4 crítica
   estado: "New" | "InProgress" | "Imported" | "Ignored";   // status
   origen: string;              // source
-  tipo: string | null;         // clave del escenario ("fuerza-bruta"); null = sin clasificar
+  tipo: string | null;         // clave ASCII en minúsculas: escenario ("fuerza-bruta") o táctica MITRE ("evasion-de-defensas"); null = sin clasificar
   antiguedadMs: number;        // max(0, generadoEn − creadaEn)
   sla: {
     estado: "dentro" | "fuera" | null;  // null = no aplica (la alerta no está "New")
@@ -136,7 +141,12 @@ Reglas:
   Las alertas convertidas están en estado `Imported`.
 - **Ventana:** una alerta entra si su día en Bogotá es ≥ el primer día de los últimos 30
   (el mismo criterio que la serie `porDia` del resumen).
-- **Tope:** si hay más de 1000, se conservan las 1000 más recientes y `truncado = true`.
+- **Tope y composición:** se conservan las 1000 más recientes y, además, TODAS las críticas y altas sin atender de la
+  ventana que sean más antiguas que esas (`composicion.criticasYAltasAdicionales`; hasta 5000 por seguridad). `total` sale
+  de un `count`. `truncado = true` si `total` es mayor que `alertas.length`. La Vista unificada lo avisa: «Mostrando las
+  1000 alertas más recientes y, además, N críticas o altas sin atender más antiguas (de T en los últimos 30 días)».
+- **Tipo de amenaza:** `escenario:<tipo>` > primera táctica MITRE de la regla de Wazuh (clave ASCII sin tildes: el frontend
+  pone las tildes en `NOMBRES_LEGIBLES`) > `null`.
 
 Ejemplo (recortado):
 
@@ -242,7 +252,44 @@ interface Tarea {
 
 ---
 
-## Cambios previstos para el backend (aún no implementados en el frontend)
+## 4. `GET /api/dashboard/wazuh` → `MetricasWazuh`
+
+Métricas que salen del bloque JSON que Wazuh deja en la `description` de cada alerta (MITRE, cumplimiento, IP de origen,
+usuario, regla, agente). El backend guarda en memoria las alertas de Wazuh de los últimos 7 días (Bogotá), sin simulaciones,
+y las sincroniza cada 30 s. Responde siempre `200`.
+
+```ts
+interface MetricasWazuh {
+  generadoEn: number;
+  estado: "cargando" | "listo";
+  progreso: number | null;          // 1–99 mientras carga (null si aún no se sabe), 100 cuando está listo. Nunca 0.
+  thehive: EstadoTheHive;
+  dias: number;                     // 7
+  desde: string;                    // primer día de la ventana, YYYY-MM-DD (Bogotá)
+  alertasAnalizadas: number | null; // alertas de la ventana con bloque legible
+  sinBloque: number | null;         // alertas de la ventana sin bloque legible (cuentan, pero no aportan)
+  mitre: { tacticas: { clave: string; cantidad: number }[];       // clave ASCII en español (acceso-a-credenciales)
+           tecnicas: { id: string; nombre: string | null; cantidad: number }[] } | null;
+  cumplimiento: { marco: "pci_dss"|"nist_800_53"|"gdpr"|"hipaa"|"tsc"; alertas: number;
+                  requisitos: { requisito: string; cantidad: number }[] }[] | null;   // siempre los 5 marcos; 3 requisitos
+  topIps: { ip: string; cantidad: number }[] | null;              // top 10
+  topUsuarios: { usuario: string; cantidad: number }[] | null;    // usuarios intentados (srcuser), top 10
+  topReglas: { id: string; descripcion: string | null; nivel: number | null; cantidad: number }[] | null;
+  agentes: { nombre: string; cantidad: number }[] | null;
+  porNivel: { nivel: number; cantidad: number }[] | null;         // nivel original de Wazuh (0–15), de mayor a menor
+}
+```
+
+- **Mientras carga** (`estado = "cargando"`): TODAS las métricas son `null`, con el `progreso` si ya se sabe. Nunca ceros.
+- Una alerta cuenta **una vez** por cada táctica, técnica, marco y control que toca (una regla puede tener varias
+  tácticas, por eso las tácticas no suman el total de alertas), y una vez por IP, usuario, regla, agente y nivel.
+- Empates: por nombre ascendente. `tecnicas` y los rankings traen 10; el frontend muestra 5.
+- Si TheHive falla después de la carga, se siguen sirviendo las últimas métricas con `thehive.respondio = false`.
+- El tipo de amenaza del resumen y la lista usa la misma regla → táctica MITRE (ver `porTipoAmenaza`).
+
+---
+
+## Cambios acordados para el backend (B ya lo usa el frontend; A sigue pendiente en el frontend)
 
 Estos dos puntos están decididos y el backend debería contemplarlos cuando se construya. El frontend los
 adoptará después; hoy funciona con lo descrito arriba.

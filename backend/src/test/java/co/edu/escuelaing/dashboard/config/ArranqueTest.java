@@ -31,7 +31,7 @@ class ArranqueTest {
     private static final String CLAVE = "CLAVE-SECRETA-QUE-NO-DEBE-SALIR";
 
     private static ConfigurableApplicationContext arrancar(String... propiedades) {
-        List<String> args = new ArrayList<>(List.of("--server.port=0", "--spring.main.banner-mode=off"));
+        List<String> args = new ArrayList<>(List.of("--server.port=0", "--spring.main.banner-mode=off", "--dashboard.refresco.activo=false"));
         for (String p : propiedades) {
             args.add("--" + p);
         }

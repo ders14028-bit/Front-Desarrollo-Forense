@@ -16,5 +16,6 @@ export const modoMock: boolean = decidirModoMock(import.meta.env.VITE_USE_MOCK, 
 const fuente: FuenteDatos = modoMock ? crearFuenteMock() : crearFuenteHttp(import.meta.env.VITE_API_URL ?? "");
 
 export const obtenerResumenGerencial = () => fuente.obtenerResumenGerencial();
+export const obtenerMetricasWazuh = () => fuente.obtenerMetricasWazuh();
 export const listarAlertas = () => fuente.listarAlertas();
 export const obtenerDetalleAlerta = (id: string) => fuente.obtenerDetalleAlerta(id);

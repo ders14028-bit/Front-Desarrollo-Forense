@@ -6,8 +6,8 @@ import java.util.Map;
 
 /**
  * Traduce las tácticas de MITRE ATT&CK (en inglés, como las manda Wazuh) a la clave en español que usa el dashboard
- * como "tipo de amenaza". El frontend la muestra con mayúscula inicial y sin guiones ("acceso-a-credenciales" →
- * "Acceso a credenciales").
+ * como "tipo de amenaza". Las claves son ASCII, sin tildes ni espacios, como las de {@code escenario:<tipo>}; el
+ * frontend las muestra con su nombre legible, con tildes ("evasion-de-defensas" → "Evasión de defensas").
  */
 public final class TacticasMitre {
 
@@ -15,16 +15,16 @@ public final class TacticasMitre {
             Map.entry("reconnaissance", "reconocimiento"),
             Map.entry("resource development", "desarrollo-de-recursos"),
             Map.entry("initial access", "acceso-inicial"),
-            Map.entry("execution", "ejecución"),
+            Map.entry("execution", "ejecucion"),
             Map.entry("persistence", "persistencia"),
             Map.entry("privilege escalation", "escalada-de-privilegios"),
-            Map.entry("defense evasion", "evasión-de-defensas"),
+            Map.entry("defense evasion", "evasion-de-defensas"),
             Map.entry("credential access", "acceso-a-credenciales"),
             Map.entry("discovery", "descubrimiento"),
             Map.entry("lateral movement", "movimiento-lateral"),
-            Map.entry("collection", "recolección"),
+            Map.entry("collection", "recoleccion"),
             Map.entry("command and control", "comando-y-control"),
-            Map.entry("exfiltration", "exfiltración"),
+            Map.entry("exfiltration", "exfiltracion"),
             Map.entry("impact", "impacto"));
 
     private TacticasMitre() {

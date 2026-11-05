@@ -25,20 +25,22 @@ import java.util.regex.Pattern;
  * armada da una cifra equivocada y la prueba falla. Un operador desconocido (por ejemplo {@code _has}) responde 400,
  * como TheHive. Registra todas las consultas recibidas.
  */
-final class TheHiveEnMemoria implements AutoCloseable {
+public final class TheHiveEnMemoria implements AutoCloseable {
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    final List<ObjectNode> alertas = new CopyOnWriteArrayList<>();
-    final List<ObjectNode> casos = new CopyOnWriteArrayList<>();
-    final List<ObjectNode> tareas = new CopyOnWriteArrayList<>();
-    final List<JsonNode> consultas = new CopyOnWriteArrayList<>();
+    public final List<ObjectNode> alertas = new CopyOnWriteArrayList<>();
+    public final List<ObjectNode> casos = new CopyOnWriteArrayList<>();
+    public final List<ObjectNode> tareas = new CopyOnWriteArrayList<>();
+    public final List<JsonNode> consultas = new CopyOnWriteArrayList<>();
     /** Si no es 0, todas las consultas responden con ese código HTTP (para simular una caída). */
-    volatile int codigoForzado = 0;
+    public volatile int codigoForzado = 0;
+    /** Si es >= 0, las consultas posteriores a esa cantidad responden 500 (para simular una caída a mitad de una carga). */
+    public volatile int fallarTrasConsultas = -1;
 
     private final HttpServer servidor;
 
-    TheHiveEnMemoria() {
+    public TheHiveEnMemoria() {
         try {
             servidor = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         } catch (IOException e) {
@@ -52,8 +54,8 @@ final class TheHiveEnMemoria implements AutoCloseable {
             try {
                 JsonNode consulta = JSON.readTree(cuerpo);
                 consultas.add(consulta);
-                if (codigoForzado != 0) {
-                    codigo = codigoForzado;
+                if (codigoForzado != 0 || (fallarTrasConsultas >= 0 && consultas.size() > fallarTrasConsultas)) {
+                    codigo = codigoForzado != 0 ? codigoForzado : 500;
                     respuesta = "{\"type\":\"Error\",\"message\":\"simulado\"}";
                 } else {
                     respuesta = JSON.writeValueAsString(evaluar(consulta.path("query")));
@@ -71,7 +73,7 @@ final class TheHiveEnMemoria implements AutoCloseable {
         servidor.start();
     }
 
-    String url() {
+    public String url() {
         return "http://127.0.0.1:" + servidor.getAddress().getPort();
     }
 
@@ -84,7 +86,7 @@ final class TheHiveEnMemoria implements AutoCloseable {
     // Datos
     // ---------------------------------------------------------------------------------------------------------
 
-    static ObjectNode alerta(String id, long creadaEn, int severidad, String estado, String origen, String tipo, String descripcion,
+    public static ObjectNode alerta(String id, long creadaEn, int severidad, String estado, String origen, String tipo, String descripcion,
                              String... etiquetas) {
         ObjectNode a = JSON.createObjectNode();
         a.put("_id", id);
@@ -105,7 +107,7 @@ final class TheHiveEnMemoria implements AutoCloseable {
         return a;
     }
 
-    static ObjectNode caso(String id, long creadoEn, String etapa, String estado, Long cerradoEn, String... etiquetas) {
+    public static ObjectNode caso(String id, long creadoEn, String etapa, String estado, Long cerradoEn, String... etiquetas) {
         ObjectNode c = JSON.createObjectNode();
         c.put("_id", id);
         c.put("_type", "case");
@@ -123,12 +125,18 @@ final class TheHiveEnMemoria implements AutoCloseable {
         return c;
     }
 
-    static ObjectNode tarea(String id, String grupo, String estado) {
+    public static ObjectNode tarea(String id, String grupo, String estado) {
         ObjectNode t = JSON.createObjectNode();
         t.put("_id", id);
         t.put("_type", "task");
         t.put("group", grupo);
         t.put("status", estado);
+        return t;
+    }
+
+    public static ObjectNode tareaDeCaso(String id, String caseId, String grupo, String estado) {
+        ObjectNode t = tarea(id, grupo, estado);
+        t.put("caseId", caseId);
         return t;
     }
 
@@ -144,6 +152,18 @@ final class TheHiveEnMemoria implements AutoCloseable {
                 case "listAlert" -> datos = new ArrayList<>(alertas);
                 case "listCase" -> datos = new ArrayList<>(casos);
                 case "listTask" -> datos = new ArrayList<>(tareas);
+                case "getAlert", "getCase" -> {
+                    // Como TheHive: un id inexistente responde 200 con resultado vacío (no 404).
+                    List<ObjectNode> fuente = nombre.equals("getAlert") ? alertas : casos;
+                    datos = new ArrayList<>(fuente.stream().filter(d -> d.path("_id").asText().equals(operacion.path("idOrName").asText())).toList());
+                }
+                case "tasks" -> {
+                    List<JsonNode> delCaso = new ArrayList<>();
+                    for (JsonNode caso : datos) {
+                        tareas.stream().filter(t -> t.path("caseId").asText().equals(caso.path("_id").asText())).forEach(delCaso::add);
+                    }
+                    datos = delCaso;
+                }
                 case "filter" -> {
                     List<JsonNode> filtrados = new ArrayList<>();
                     for (JsonNode d : datos) {
@@ -294,21 +314,21 @@ final class TheHiveEnMemoria implements AutoCloseable {
     // Consultas recibidas
     // ---------------------------------------------------------------------------------------------------------
 
-    List<String> consultasComoTexto() {
+    public List<String> consultasComoTexto() {
         return consultas.stream().map(JsonNode::toString).toList();
     }
 
-    long contarConsultas(java.util.function.Predicate<JsonNode> condicion) {
+    public long contarConsultas(java.util.function.Predicate<JsonNode> condicion) {
         return consultas.stream().filter(condicion).count();
     }
 
     /** ¿La consulta usa ese operador sobre ese campo, en cualquier parte de sus filtros? */
-    static boolean usa(JsonNode nodo, String operador, String campo) {
+    public static boolean usa(JsonNode nodo, String operador, String campo) {
         return usaValor(nodo, operador, campo, null);
     }
 
     /** ¿La consulta usa ese operador sobre ese campo con ese valor (texto)? {@code valor == null} = cualquiera. */
-    static boolean usaValor(JsonNode nodo, String operador, String campo, String valor) {
+    public static boolean usaValor(JsonNode nodo, String operador, String campo, String valor) {
         if (nodo.isObject()) {
             JsonNode uso = nodo.get(operador);
             if (uso != null && campo.equals(uso.path("_field").asText()) && (valor == null || valor.equals(uso.path("_value").asText()))) {
@@ -323,8 +343,27 @@ final class TheHiveEnMemoria implements AutoCloseable {
         return false;
     }
 
+    /** TODOS los valores numéricos de un operador sobre un campo, en cualquier parte de la consulta. */
+    public static java.util.List<Long> valoresNumericos(JsonNode nodo, String operador, String campo) {
+        var valores = new java.util.ArrayList<Long>();
+        recolectar(nodo, operador, campo, valores);
+        return valores;
+    }
+
+    private static void recolectar(JsonNode nodo, String operador, String campo, java.util.List<Long> valores) {
+        if (nodo.isObject()) {
+            JsonNode uso = nodo.get(operador);
+            if (uso != null && campo.equals(uso.path("_field").asText())) {
+                valores.add(uso.path("_value").asLong());
+            }
+        }
+        for (JsonNode hijo : nodo) {
+            recolectar(hijo, operador, campo, valores);
+        }
+    }
+
     /** Valor numérico de un operador sobre un campo (el primero que aparezca), o null. */
-    static Long valorNumerico(JsonNode nodo, String operador, String campo) {
+    public static Long valorNumerico(JsonNode nodo, String operador, String campo) {
         if (nodo.isObject()) {
             JsonNode uso = nodo.get(operador);
             if (uso != null && campo.equals(uso.path("_field").asText())) {
@@ -340,13 +379,13 @@ final class TheHiveEnMemoria implements AutoCloseable {
         return null;
     }
 
-    static boolean es(JsonNode consulta, String origen, String ultimaOperacion) {
+    public static boolean es(JsonNode consulta, String origen, String ultimaOperacion) {
         JsonNode ops = consulta.path("query");
         return origen.equals(ops.get(0).path("_name").asText())
                 && ultimaOperacion.equals(ops.get(ops.size() - 1).path("_name").asText());
     }
 
-    static boolean esAgregacion(JsonNode consulta) {
+    public static boolean esAgregacion(JsonNode consulta) {
         JsonNode ops = consulta.path("query");
         return "aggregation".equals(ops.get(ops.size() - 1).path("_name").asText());
     }

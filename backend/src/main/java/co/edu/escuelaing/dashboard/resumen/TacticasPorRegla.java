@@ -38,13 +38,13 @@ public class TacticasPorRegla {
         return entrada != null && reloj.millis() < entrada.venceMs();
     }
 
-    /** La táctica de la regla si se conoce y tiene; vacío si no se sabe o se sabe que no tiene. */
+    /**
+     * La última táctica conocida de la regla; vacío si nunca se supo o se sabe que no tiene. Un dato VENCIDO se sigue
+     * usando mientras no se pueda renovar: si el muestreo falla un momento, la cifra no cambia entre refrescos.
+     */
     public Optional<String> tactica(String reglaId) {
         Entrada entrada = cache.get(reglaId);
-        if (entrada == null || reloj.millis() >= entrada.venceMs()) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(entrada.tactica());
+        return entrada == null ? Optional.empty() : Optional.ofNullable(entrada.tactica());
     }
 
     public void guardar(String reglaId, Optional<String> tactica) {

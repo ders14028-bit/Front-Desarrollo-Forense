@@ -122,7 +122,7 @@ class AlertaYTipoTest {
 
     @Test
     void latacticaSaleDeLaDescripcionDeLaAlerta() {
-        assertThat(TipoAmenaza.tacticaDe(FixturesTheHive.deRegla("60106").descripcion())).contains("evasión-de-defensas");
+        assertThat(TipoAmenaza.tacticaDe(FixturesTheHive.deRegla("60106").descripcion())).contains("evasion-de-defensas");
         assertThat(TipoAmenaza.tacticaDe(FixturesTheHive.deRegla("60137").descripcion())).isEmpty();
         assertThat(TipoAmenaza.tacticaDe("sin bloque")).isEmpty();
     }
@@ -133,7 +133,7 @@ class AlertaYTipoTest {
     void lasTacticasDeMitreSeTraducenAlEspanol() {
         assertThat(TacticasMitre.clave("Credential Access")).isEqualTo("acceso-a-credenciales");
         assertThat(TacticasMitre.clave("Lateral Movement")).isEqualTo("movimiento-lateral");
-        assertThat(TacticasMitre.clave("Defense Evasion")).isEqualTo("evasión-de-defensas");
+        assertThat(TacticasMitre.clave("Defense Evasion")).isEqualTo("evasion-de-defensas");
         assertThat(TacticasMitre.clave("Command and Control")).isEqualTo("comando-y-control");
         assertThat(TacticasMitre.clave("  credential   access ")).isEqualTo("acceso-a-credenciales");
     }
@@ -146,6 +146,20 @@ class AlertaYTipoTest {
 
         assertThat(tacticas).allSatisfy(t -> assertThat(TacticasMitre.clave(t)).isNotEqualTo(t.toLowerCase().replace(' ', '-')));
         assertThat(tacticas.stream().map(TacticasMitre::clave).distinct()).hasSize(14);
+    }
+
+    @Test
+    void lasClavesSonAsciiSinTildesNiEspacios() {
+        List<String> tacticas = List.of("Reconnaissance", "Resource Development", "Initial Access", "Execution", "Persistence",
+                "Privilege Escalation", "Defense Evasion", "Credential Access", "Discovery", "Lateral Movement", "Collection",
+                "Command and Control", "Exfiltration", "Impact", "Táctica Con Tildes ñ");
+
+        assertThat(tacticas.stream().map(TacticasMitre::clave)).allMatch(c -> c.matches("[a-z0-9]+(-[a-z0-9]+)*"));
+        assertThat(TacticasMitre.clave("Execution")).isEqualTo("ejecucion");
+        assertThat(TacticasMitre.clave("Defense Evasion")).isEqualTo("evasion-de-defensas");
+        assertThat(TacticasMitre.clave("Privilege Escalation")).isEqualTo("escalada-de-privilegios");
+        assertThat(TacticasMitre.clave("Collection")).isEqualTo("recoleccion");
+        assertThat(TacticasMitre.clave("Exfiltration")).isEqualTo("exfiltracion");
     }
 
     @Test

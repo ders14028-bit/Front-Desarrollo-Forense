@@ -16,7 +16,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest(properties = {
         "dashboard.thehive.url=https://thehive.prueba.invalid",
         "dashboard.thehive.api-key=CLAVE-DE-PRUEBA-NO-REAL",
-        "dashboard.thehive.organizacion=escuelaing-prueba"
+        "dashboard.thehive.organizacion=escuelaing-prueba",
+        "dashboard.refresco.activo=false"
 })
 @AutoConfigureMockMvc
 public @interface PruebaDeApi {

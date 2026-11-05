@@ -1,5 +1,6 @@
 import type { DetalleAlerta, ListaAlertas } from "../types/listaAlertas";
 import type { ResumenGerencial } from "../types/metricas";
+import type { MetricasWazuh } from "../types/wazuh";
 import { ErrorApi, type FuenteDatos } from "./tipos";
 
 interface OpcionesHttp {
@@ -66,6 +67,12 @@ export function crearFuenteHttp(baseUrl: string, opciones: OpcionesHttp = {}): F
       const datos = await pedir("/api/dashboard/resumen");
       if (!esObjeto(datos) || !datos.alertas || !datos.casos) throw new ErrorApi(FORMATO_INESPERADO);
       return datos as unknown as ResumenGerencial;
+    },
+
+    async obtenerMetricasWazuh() {
+      const datos = await pedir("/api/dashboard/wazuh");
+      if (!esObjeto(datos) || (datos.estado !== "cargando" && datos.estado !== "listo")) throw new ErrorApi(FORMATO_INESPERADO);
+      return datos as unknown as MetricasWazuh;
     },
 
     async listarAlertas() {

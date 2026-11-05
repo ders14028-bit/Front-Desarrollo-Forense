@@ -10,6 +10,11 @@ import java.util.List;
 public record ResumenGerencial(long generadoEn, boolean datosDeLaboratorio, ResumenAlertas alertas, ResumenCasos casos,
                                EstadoTheHive thehive) {
 
+    /** El mismo resumen con otro estado de TheHive (la última consulta puede haber fallado desde que se calculó). */
+    public ResumenGerencial conEstado(EstadoTheHive estado) {
+        return new ResumenGerencial(generadoEn, datosDeLaboratorio, alertas, casos, estado);
+    }
+
     public record ResumenAlertas(long recibidas, long sinAtender, long criticasYAltas, Long masAntiguaSinAtenderMs,
                                  Long antiguedadPromedioSinAtenderMs, long fueraDeSla,
                                  List<ConteoPorSeveridad> porSeveridad, List<ConteoPorTipo> porTipoAmenaza,

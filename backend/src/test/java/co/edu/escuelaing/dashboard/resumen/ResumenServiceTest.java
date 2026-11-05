@@ -16,6 +16,7 @@ import co.edu.escuelaing.dashboard.resumen.ResumenGerencial.ConteoPorDia;
 import co.edu.escuelaing.dashboard.resumen.ResumenGerencial.ConteoPorOrigen;
 import co.edu.escuelaing.dashboard.resumen.ResumenGerencial.ConteoPorSeveridad;
 import co.edu.escuelaing.dashboard.resumen.ResumenGerencial.ConteoPorTipo;
+import co.edu.escuelaing.dashboard.thehive.ConsultasDashboard;
 import co.edu.escuelaing.dashboard.thehive.cliente.TheHiveClient;
 import co.edu.escuelaing.dashboard.thehive.cliente.TheHiveNoRespondeException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -91,7 +92,9 @@ class ResumenServiceTest {
     private ResumenService nuevoServicio(ReglasNegocio reglas) {
         var cliente = new TheHiveClient(new ConfiguracionTheHive(hive.url(), "CLAVE-DE-PRUEBA", "escuelaing-prueba"),
                 new LimitesTheHive(Duration.ofSeconds(2), Duration.ofSeconds(5), null, null), JSON);
-        return new ResumenService(cliente, new SlaMinutos(15, 30, 120, 240), reglas, reloj, conteos, tacticas);
+        var consultas = new ConsultasDashboard(reglas);
+        return new ResumenService(cliente, new SlaMinutos(15, 30, 120, 240), reglas, reloj, conteos, tacticas,
+                new MuestreoDeTacticas(cliente, consultas, tacticas), consultas);
     }
 
     private static ReglasNegocio reglas(boolean incluirSimulaciones) {
@@ -199,7 +202,7 @@ class ResumenServiceTest {
         // ~1 y ~8 = phishing (~8 también trae regla:60106, pero el escenario gana); ~6 = malware;
         // ~2, ~3 (60106) y ~7 (5501) = Defense Evasion; ~4 (60137 sin MITRE) y ~5 (sin regla) = sin clasificar.
         assertThat(a.porTipoAmenaza()).containsExactly(
-                new ConteoPorTipo("evasión-de-defensas", 3), new ConteoPorTipo("phishing", 2), new ConteoPorTipo("malware", 1));
+                new ConteoPorTipo("evasion-de-defensas", 3), new ConteoPorTipo("phishing", 2), new ConteoPorTipo("malware", 1));
         assertThat(a.sinClasificar()).isEqualTo(2);
         long suma = a.porTipoAmenaza().stream().mapToLong(ConteoPorTipo::cantidad).sum() + a.sinClasificar();
         assertThat(suma).as("cada alerta cuenta exactamente una vez").isEqualTo(a.recibidas());
@@ -247,7 +250,7 @@ class ResumenServiceTest {
         reloj.ahora.addAndGet(11 * MIN);
         var resumen = servicio.calcular().alertas();
 
-        assertThat(resumen.porTipoAmenaza()).containsExactly(new ConteoPorTipo("evasión-de-defensas", 1));
+        assertThat(resumen.porTipoAmenaza()).containsExactly(new ConteoPorTipo("evasion-de-defensas", 1));
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -358,8 +361,85 @@ class ResumenServiceTest {
             var consultas = hive.consultas.stream().filter(c -> TheHiveEnMemoria.usaValor(c, "_eq", "severity", String.valueOf(s))
                     && TheHiveEnMemoria.usa(c, "_lt", "_createdAt") && TheHiveEnMemoria.es(c, "listAlert", "count")).toList();
             assertThat(consultas).as("severidad " + s).hasSize(1);
-            assertThat(TheHiveEnMemoria.valorNumerico(consultas.get(0), "_lt", "_createdAt")).isEqualTo(T - limiteMin * MIN);
+            assertThat(TheHiveEnMemoria.valoresNumericos(consultas.get(0), "_lt", "_createdAt")).contains(T - limiteMin * MIN);
         }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------
+    // Estabilidad de las cifras entre refrescos
+    // ---------------------------------------------------------------------------------------------------------
+
+    @Test
+    void todasLasConsultasDeAlertasMiranElMismoConjuntoCreadoAntesDelInstanteDelCalculo() {
+        cargarAlertas();
+
+        servicio.calcular();
+
+        var deAlertas = hive.consultas.stream().filter(c -> "listAlert".equals(c.path("query").get(0).path("_name").asText())
+                && !TheHiveEnMemoria.usa(c, "_eq", "tags") || TheHiveEnMemoria.es(c, "listAlert", "count")).toList();
+        assertThat(deAlertas).isNotEmpty().allSatisfy(c ->
+                assertThat(TheHiveEnMemoria.valoresNumericos(c, "_lt", "_createdAt")).as(c.toString()).contains(T + 1));
+    }
+
+    @Test
+    void lasAlertasQueLleganDespuesDelInstanteDelCalculoNoEntranEnEseCalculo() {
+        cargarAlertas();
+        hive.alertas.add(alerta("~futura", T + 5, 4, "New", "wazuh", "wazuh", "x", "wazuh", "escenario:phishing"));
+
+        var a = servicio.calcular().alertas();
+
+        assertThat(a.recibidas()).isEqualTo(8);
+        assertThat(a.porTipoAmenaza().stream().mapToLong(ConteoPorTipo::cantidad).sum() + a.sinClasificar()).isEqualTo(8);
+    }
+
+    @Test
+    void conMuchasReglasElMuestreoEsCompletoYSinClasificarNoCambiaEntreRefrescos() {
+        // 150 reglas distintas (más que las 80 del primer diseño), cada una con una alerta con táctica MITRE.
+        String conTactica = descripcionDeRegla("60106");
+        for (int i = 0; i < 150; i++) {
+            hive.alertas.add(alerta("~m" + i, T - (i + 1) * MIN, 1, "New", "wazuh", "wazuh", conTactica, "wazuh", "regla:9" + i));
+        }
+        // Y 20 de una regla sin MITRE, 5 sin regla.
+        for (int i = 0; i < 20; i++) {
+            hive.alertas.add(alerta("~s" + i, T - (i + 1) * MIN, 1, "New", "wazuh", "wazuh", descripcionDeRegla("60137"), "wazuh", "regla:60137"));
+        }
+        for (int i = 0; i < 5; i++) {
+            hive.alertas.add(alerta("~n" + i, T - (i + 1) * MIN, 1, "New", "wazuh", "wazuh", "x", "wazuh"));
+        }
+
+        var primera = servicio.calcular().alertas();
+        var segunda = servicio.calcular().alertas();
+        reloj.ahora.addAndGet(30_000);
+        var tercera = servicio.calcular().alertas();
+
+        assertThat(primera.sinClasificar()).as("20 de la regla sin MITRE + 5 sin regla; ninguna regla con táctica queda sin muestrear").isEqualTo(25);
+        assertThat(primera.porTipoAmenaza()).containsExactly(new ConteoPorTipo("evasion-de-defensas", 150));
+        assertThat(segunda.sinClasificar()).isEqualTo(primera.sinClasificar());
+        assertThat(tercera.sinClasificar()).isEqualTo(primera.sinClasificar());
+        assertThat(tercera.porTipoAmenaza()).isEqualTo(primera.porTipoAmenaza());
+    }
+
+    @Test
+    void siUnaMuestraVencidaYaNoTraeElBloqueSeConservaLaTacticaConocida() {
+        hive.alertas.add(alerta("~1", T - MIN, 1, "New", "wazuh", "wazuh", descripcionDeRegla("60106"), "wazuh", "regla:5710"));
+        var antes = servicio.calcular().alertas();
+
+        hive.alertas.set(0, alerta("~1", T - MIN, 1, "New", "wazuh", "wazuh", "sin bloque", "wazuh", "regla:5710"));
+        reloj.ahora.addAndGet(7 * 60 * MIN);   // la táctica (vigente 6 h) venció
+        var despues = servicio.calcular().alertas();
+
+        assertThat(antes.porTipoAmenaza()).containsExactly(new ConteoPorTipo("evasion-de-defensas", 1));
+        assertThat(despues.porTipoAmenaza()).as("sigue igual").isEqualTo(antes.porTipoAmenaza());
+        assertThat(despues.sinClasificar()).isZero();
+    }
+
+    @Test
+    void unDatoVencidoDeLaCacheSeSigueUsandoMientrasNoSePuedaRenovar() {
+        tacticas.guardar("5710", java.util.Optional.of("acceso-a-credenciales"));
+        reloj.ahora.addAndGet(7 * 60 * MIN);
+
+        assertThat(tacticas.sabe("5710")).as("vencido: hay que renovarlo").isFalse();
+        assertThat(tacticas.tactica("5710")).as("pero mientras tanto se usa el último").contains("acceso-a-credenciales");
     }
 
     @Test
@@ -618,24 +698,5 @@ class ResumenServiceTest {
         hive.codigoForzado = 502;
 
         assertThatThrownBy(() -> servicio.calcular()).isInstanceOf(TheHiveNoRespondeException.class);
-    }
-
-    @Test
-    void elResumenSeReutilizaPocosSegundos() {
-        cargarAlertas();
-
-        var primero = servicio.obtener();
-        int consultas = hive.consultas.size();
-        reloj.ahora.addAndGet(5_000);
-        var segundo = servicio.obtener();
-
-        assertThat(segundo).isSameAs(primero);
-        assertThat(hive.consultas).hasSize(consultas);
-
-        reloj.ahora.addAndGet(6_000);
-        var tercero = servicio.obtener();
-
-        assertThat(tercero).isNotSameAs(primero);
-        assertThat(tercero.generadoEn()).isEqualTo(T + 11_000);
     }
 }

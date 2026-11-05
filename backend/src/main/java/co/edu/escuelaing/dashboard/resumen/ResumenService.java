@@ -14,6 +14,7 @@ import co.edu.escuelaing.dashboard.resumen.ResumenGerencial.ConteoPorTipo;
 import co.edu.escuelaing.dashboard.resumen.ResumenGerencial.EstadoTheHive;
 import co.edu.escuelaing.dashboard.resumen.ResumenGerencial.ResumenAlertas;
 import co.edu.escuelaing.dashboard.resumen.ResumenGerencial.ResumenCasos;
+import co.edu.escuelaing.dashboard.thehive.ConsultasDashboard;
 import co.edu.escuelaing.dashboard.thehive.cliente.ConsultaTheHive;
 import co.edu.escuelaing.dashboard.thehive.cliente.Filtro;
 import co.edu.escuelaing.dashboard.thehive.cliente.Orden;
@@ -64,12 +65,6 @@ public class ResumenService {
 
     /** Días de la serie "alertas por día". */
     static final int DIAS_SERIE = 30;
-    /** Cuánto se reutiliza un resumen ya calculado (el frontend pide cada 30 s; varios clientes no multiplican consultas). */
-    static final long REUTILIZAR_MS = 10_000L;
-    /** Máximo de reglas nuevas que se muestrean en un cálculo (las demás, en el siguiente refresco). */
-    static final int MAX_MUESTRAS_POR_CALCULO = 80;
-    /** Alertas que se miran por regla hasta encontrar una con bloque de Wazuh legible. */
-    private static final int ALERTAS_POR_MUESTRA = 3;
     private static final int TOPE_CASOS_CERRADOS = 1000;
 
     private final TheHiveClient thehive;
@@ -78,35 +73,20 @@ public class ResumenService {
     private final Clock reloj;
     private final ConteosPorDia conteosPorDia;
     private final TacticasPorRegla tacticas;
-
-    private volatile ResumenGerencial ultimo;
-    private volatile long ultimoCalculadoMs;
+    private final MuestreoDeTacticas muestreo;
+    private final ConsultasDashboard consultas;
 
     public ResumenService(TheHiveClient thehive, SlaMinutos sla, ReglasNegocio reglas, Clock reloj,
-                          ConteosPorDia conteosPorDia, TacticasPorRegla tacticas) {
+                          ConteosPorDia conteosPorDia, TacticasPorRegla tacticas, MuestreoDeTacticas muestreo,
+                          ConsultasDashboard consultas) {
         this.thehive = thehive;
         this.sla = sla;
         this.reglas = reglas;
         this.reloj = reloj;
         this.conteosPorDia = conteosPorDia;
         this.tacticas = tacticas;
-    }
-
-    /** Resumen reutilizado si es reciente (menos de {@value #REUTILIZAR_MS} ms); si no, se calcula de nuevo. */
-    public ResumenGerencial obtener() {
-        ResumenGerencial reciente = ultimo;
-        if (reciente != null && reloj.millis() - ultimoCalculadoMs < REUTILIZAR_MS) {
-            return reciente;
-        }
-        synchronized (this) {
-            if (ultimo != null && reloj.millis() - ultimoCalculadoMs < REUTILIZAR_MS) {
-                return ultimo;
-            }
-            ResumenGerencial nuevo = calcular();
-            ultimo = nuevo;
-            ultimoCalculadoMs = reloj.millis();
-            return nuevo;
-        }
+        this.muestreo = muestreo;
+        this.consultas = consultas;
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -116,31 +96,34 @@ public class ResumenService {
     public ResumenGerencial calcular() {
         final long ahora = reloj.millis();
         final List<LocalDate> dias = DiasBogota.ultimos(ahora, DIAS_SERIE);
+        // Todas las consultas de alertas miran el MISMO conjunto: las creadas antes de este instante. Así, aunque lleguen
+        // alertas mientras se calcula, las cifras cuadran entre sí (por ejemplo, tipos + sin clasificar = recibidas).
+        final Filtro hasta = Filtro.lt("_createdAt", ahora + 1);
         conteosPorDia.podar(dias.get(0));
 
         final Filtro sinAtender = Filtro.eq("status", Alerta.ESTADO_SIN_ATENDER);
 
         // --- alertas ---
-        var recibidas = async(() -> thehive.contar(alertas().count()));
-        var sinAtenderN = async(() -> thehive.contar(alertas(sinAtender).count()));
-        var criticasYAltas = async(() -> thehive.contar(alertas(Filtro.gte("severity", 3)).count()));
-        var masAntigua = async(() -> primeraCreada(alertas(sinAtender).sort("_createdAt", Orden.ASCENDENTE).page(0, 1)));
-        var promedioCreada = async(() -> promedioCreada(alertas(sinAtender).promedioDe("_createdAt")));
+        var recibidas = async(() -> thehive.contar(alertas(hasta).count()));
+        var sinAtenderN = async(() -> thehive.contar(alertas(hasta, sinAtender).count()));
+        var criticasYAltas = async(() -> thehive.contar(alertas(hasta, Filtro.gte("severity", 3)).count()));
+        var masAntigua = async(() -> primeraCreada(alertas(hasta, sinAtender).sort("_createdAt", Orden.ASCENDENTE).page(0, 1)));
+        var promedioCreada = async(() -> promedioCreada(alertas(hasta, sinAtender).promedioDe("_createdAt")));
         var fueraDeSla = new ArrayList<CompletableFuture<Long>>();
         for (int severidad = 1; severidad <= 4; severidad++) {
             final int s = severidad;
             final long limite = ahora - sla.porSeveridad(s) * MS_POR_MINUTO;
             // Fuera de SLA = antigüedad ESTRICTAMENTE mayor que el SLA => _createdAt estrictamente menor que (ahora − SLA).
-            fueraDeSla.add(async(() -> thehive.contar(alertas(sinAtender, Filtro.eq("severity", s), Filtro.lt("_createdAt", limite)).count())));
+            fueraDeSla.add(async(() -> thehive.contar(alertas(hasta, sinAtender, Filtro.eq("severity", s), Filtro.lt("_createdAt", limite)).count())));
         }
-        var porSeveridad = async(() -> thehive.consultarAgregacion(alertas().agregarPorCampo("severity")));
-        var porOrigen = async(() -> thehive.consultarAgregacion(alertas().agregarPorCampo("source")));
+        var porSeveridad = async(() -> thehive.consultarAgregacion(alertas(hasta).agregarPorCampo("severity")));
+        var porOrigen = async(() -> thehive.consultarAgregacion(alertas(hasta).agregarPorCampo("source")));
 
         // --- tipo de amenaza ---
         Filtro conEscenario = Filtro.like("tags", TipoAmenaza.PREFIJO_ESCENARIO + "*");
-        var alertasConEscenario = async(() -> thehive.contar(alertas(conEscenario).count()));
-        var etiquetasConEscenario = async(() -> thehive.consultarAgregacion(alertas(conEscenario).agregarPorCampo("tags")));
-        var etiquetasSinEscenario = async(() -> thehive.consultarAgregacion(alertas(Filtro.not(conEscenario)).agregarPorCampo("tags")));
+        var alertasConEscenario = async(() -> thehive.contar(alertas(hasta, conEscenario).count()));
+        var etiquetasConEscenario = async(() -> thehive.consultarAgregacion(alertas(hasta, conEscenario).agregarPorCampo("tags")));
+        var etiquetasSinEscenario = async(() -> thehive.consultarAgregacion(alertas(hasta, Filtro.not(conEscenario)).agregarPorCampo("tags")));
 
         // --- alertas por día ---
         var porDia = new ArrayList<CompletableFuture<ConteoPorDia>>();
@@ -149,13 +132,13 @@ public class ResumenService {
         }
 
         // --- aviso de laboratorio y casos ---
-        var alertasDeLaboratorio = async(() -> thehive.contar(alertas(Filtro.eq("tags", reglas.etiquetaLaboratorio())).count()));
+        var alertasDeLaboratorio = async(() -> thehive.contar(alertas(hasta, Filtro.eq("tags", reglas.etiquetaLaboratorio())).count()));
         var casosDeLaboratorio = async(() -> thehive.contar(casos(Filtro.eq("tags", reglas.etiquetaLaboratorio())).count()));
         var reportados = async(() -> thehive.contar(casos().count()));
         var abiertos = async(() -> thehive.contar(casos(Filtro.eq("stage", reglas.etapaCasoNuevo())).count()));
         var enProgreso = async(() -> thehive.contar(casos(Filtro.eq("stage", reglas.etapaCasoEnProgreso())).count()));
         var cerrados = async(() -> thehive.contar(casos(Filtro.eq("stage", reglas.etapaCasoCerrado())).count()));
-        var convertidas = async(() -> thehive.contar(alertas(Filtro.eq("status", Alerta.ESTADO_CONVERTIDA)).count()));
+        var convertidas = async(() -> thehive.contar(alertas(hasta, Filtro.eq("status", Alerta.ESTADO_CONVERTIDA)).count()));
         var contenciones = async(() -> thehive.contar(ConsultaTheHive.listTask()
                 .filter(Filtro.and(Filtro.eq("group", reglas.grupoContencion()), Filtro.eq("status", reglas.estadoTareaCompletada())))
                 .count()));
@@ -195,28 +178,16 @@ public class ResumenService {
     // Consultas
     // ---------------------------------------------------------------------------------------------------------
 
-    /** Alertas, sin las simulaciones (salvo configuración) y con los filtros indicados. */
     private ConsultaTheHive alertas(Filtro... filtros) {
-        List<Filtro> todos = new ArrayList<>();
-        if (!reglas.incluirSimulaciones()) {
-            todos.add(Filtro.ne("type", reglas.tipoSimulacion()));
-        }
-        todos.addAll(List.of(filtros));
-        return conFiltros(ConsultaTheHive.listAlert(), todos);
+        return consultas.alertas(filtros);
     }
 
     private ConsultaTheHive casos(Filtro... filtros) {
-        return conFiltros(ConsultaTheHive.listCase(), List.of(filtros));
-    }
-
-    private static ConsultaTheHive conFiltros(ConsultaTheHive consulta, List<Filtro> filtros) {
-        if (filtros.isEmpty()) {
-            return consulta;
-        }
-        return consulta.filter(filtros.size() == 1 ? filtros.get(0) : Filtro.and(filtros.toArray(new Filtro[0])));
+        return consultas.casos(filtros);
     }
 
     private long alertasDelDia(LocalDate dia, long ahora) {
+        final Filtro hasta = Filtro.lt("_createdAt", ahora + 1);
         boolean esHoy = dia.equals(DiasBogota.dia(ahora));
         if (!esHoy) {
             Optional<Long> guardado = conteosPorDia.guardado(dia, ahora);
@@ -224,7 +195,7 @@ public class ResumenService {
                 return guardado.get();
             }
         }
-        long cantidad = thehive.contar(alertas(
+        long cantidad = thehive.contar(alertas(hasta, 
                 Filtro.gte("_createdAt", DiasBogota.inicio(dia)),
                 Filtro.lt("_createdAt", DiasBogota.inicio(dia.plusDays(1)))).count());
         conteosPorDia.guardar(dia, cantidad, ahora);
@@ -348,7 +319,7 @@ public class ResumenService {
                 }
             }
         }
-        muestrearReglasNuevas(porRegla.keySet());
+        muestreo.asegurar(porRegla.keySet());
         long conTactica = 0;
         for (var regla : porRegla.entrySet()) {
             Optional<String> tactica = tacticas.tactica(regla.getKey());
@@ -367,52 +338,6 @@ public class ResumenService {
                 .map(e -> new ConteoPorTipo(e.getKey(), e.getValue()))
                 .toList();
         return new Tipos(lista, sinClasificar);
-    }
-
-    /** Pide una alerta de muestra por cada regla cuya táctica no se conoce (hasta {@value #MAX_MUESTRAS_POR_CALCULO} por cálculo). */
-    private void muestrearReglasNuevas(Iterable<String> reglasVistas) {
-        List<String> pendientes = new ArrayList<>();
-        for (String regla : reglasVistas) {
-            if (!tacticas.sabe(regla)) {
-                pendientes.add(regla);
-            }
-        }
-        if (pendientes.isEmpty()) {
-            return;
-        }
-        if (pendientes.size() > MAX_MUESTRAS_POR_CALCULO) {
-            log.info("{} reglas sin táctica conocida: se muestrean {} ahora y el resto en los siguientes refrescos.",
-                    pendientes.size(), MAX_MUESTRAS_POR_CALCULO);
-            pendientes = pendientes.subList(0, MAX_MUESTRAS_POR_CALCULO);
-        }
-        List<CompletableFuture<Void>> tareas = pendientes.stream()
-                .map(regla -> async(() -> {
-                    muestrear(regla);
-                    return (Void) null;
-                }))
-                .toList();
-        tareas.forEach(ResumenService::esperar);
-    }
-
-    private void muestrear(String regla) {
-        try {
-            List<JsonNode> muestra = thehive.listar(alertas(Filtro.eq("tags", TipoAmenaza.PREFIJO_REGLA + regla)).page(0, ALERTAS_POR_MUESTRA));
-            if (muestra.isEmpty()) {
-                return; // la regla no tiene alertas (carrera con el recuento): se reintenta en el próximo refresco
-            }
-            // La primera muestra que traiga un bloque de Wazuh legible manda; si ninguna lo trae, la regla no tiene táctica.
-            Optional<String> tactica = Optional.empty();
-            for (JsonNode nodo : muestra) {
-                tactica = TipoAmenaza.tacticaDe(Alerta.desde(nodo).descripcion());
-                if (tactica.isPresent()) {
-                    break;
-                }
-            }
-            tacticas.guardar(regla, tactica);
-        } catch (TheHiveException e) {
-            // Una muestra fallida no tumba el resumen: la regla queda sin dato y se reintenta en el próximo refresco.
-            log.warn("No se pudo muestrear la regla {}: {}", regla, e.getMessage());
-        }
     }
 
     // ---------------------------------------------------------------------------------------------------------

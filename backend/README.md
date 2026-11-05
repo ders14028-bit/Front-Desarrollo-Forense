@@ -77,7 +77,12 @@ Nunca se registran cabeceras ni la key. El cuerpo de cada consulta solo aparece 
 | Ruta | Estado |
 |---|---|
 | `GET /api/dashboard/configuracion` | listo |
-| `GET /api/dashboard/resumen` | listo (se calcula al pedirlo y se reutiliza 10 s; 503 si TheHive no responde, hasta el paso 6) |
-| `GET /api/dashboard/alertas`, `/alertas/{id}` | pendientes (pasos siguientes) |
+| `GET /api/dashboard/resumen` | listo; se sirve desde memoria (refresco en segundo plano cada 30 s) |
+| `GET /api/dashboard/alertas` | listo; 1000 más recientes de 30 días + todas las críticas y altas sin atender, desde memoria |
+| `GET /api/dashboard/wazuh` | listo; métricas de Wazuh (7 días) desde memoria; `estado: cargando` con progreso durante la carga inicial |
+| `GET /api/dashboard/alertas/{id}` | listo; consulta a TheHive; 404 si el resultado viene vacío |
+
+Si TheHive falla después de haber respondido una vez, resumen y lista siguen dando el último dato bueno con
+`thehive.respondio = false`. Solo si nunca hubo datos (o en el detalle) la respuesta es `503` sin cuerpo.
 
 Toda la API es de solo `GET`; hay un test que falla si aparece otro método.

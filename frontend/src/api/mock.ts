@@ -1,4 +1,5 @@
 import { generarMocks } from "../mocks";
+import { generarMetricasWazuh } from "../mocks/wazuh";
 import { construirDetalle, construirListaAlertas } from "../utils/alertas";
 import { calcularResumen } from "../utils/metricas";
 import { ErrorApi, type FuenteDatos } from "./tipos";
@@ -14,6 +15,8 @@ interface OpcionesMock {
   /** Si es true, toda llamada falla (para probar el estado de error de la interfaz). */
   falla?: boolean;
   semilla?: number;
+  /** Si es true, las métricas de Wazuh salen como si el backend siguiera con la carga inicial (estado "cargando"). */
+  wazuhCargando?: boolean;
 }
 
 const esperar = (ms: number) => (ms > 0 ? new Promise<void>((r) => setTimeout(r, ms)) : Promise.resolve());
@@ -27,6 +30,7 @@ export function crearFuenteMock(opciones: OpcionesMock = {}): FuenteDatos {
   const ahora = opciones.ahora ?? Date.now;
   const demoraMs = opciones.demoraMs ?? 300;
   const falla = opciones.falla ?? import.meta.env.VITE_MOCK_ERROR === "true";
+  const wazuhCargando = opciones.wazuhCargando ?? import.meta.env.VITE_MOCK_WAZUH_CARGANDO === "true";
   const { alertas, casos, tareas } = generarMocks(ahora(), opciones.semilla ?? SEMILLA);
 
   async function simularRed() {
@@ -39,6 +43,11 @@ export function crearFuenteMock(opciones: OpcionesMock = {}): FuenteDatos {
       await simularRed();
       const resumen = calcularResumen(alertas, casos, tareas, ahora());
       return { ...resumen, thehive: { respondio: true, consultadoEn: resumen.generadoEn } };
+    },
+
+    async obtenerMetricasWazuh() {
+      await simularRed();
+      return generarMetricasWazuh(ahora(), { cargando: wazuhCargando });
     },
 
     async listarAlertas() {
