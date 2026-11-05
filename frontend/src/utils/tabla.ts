@@ -1,5 +1,5 @@
 import type { EstadoAlerta, Severidad } from "../types/alerta";
-import type { AlertaFila } from "../types/listaAlertas";
+import type { AlertaFila, ComposicionLista } from "../types/listaAlertas";
 import { diaBogota, ultimosDias } from "./fechas";
 
 /** Lógica pura de la tabla de la Vista unificada: filtrar, ordenar y paginar en el frontend. */
@@ -293,4 +293,17 @@ export function textoResumenLista(total: number, coincidencias: number, conFiltr
   const alertas = total === 1 ? "alerta" : "alertas";
   const cantidad = conFiltros ? `${coincidencias} de ${total}` : `${total}`;
   return `${cantidad} ${alertas} · últimos ${dias} días`;
+}
+
+/**
+ * Aviso cuando la lista no trae todas las alertas de la ventana. Dice con claridad qué se muestra: las más recientes y,
+ * si las hay, las críticas y altas sin atender más antiguas que se añadieron aparte.
+ */
+export function textoAvisoTruncada(composicion: ComposicionLista, total: number, dias: number): string {
+  const { recientes, criticasYAltasAdicionales: extra } = composicion;
+  if (extra > 0) {
+    const adicionales = extra === 1 ? "1 crítica o alta sin atender más antigua" : `${extra} críticas o altas sin atender más antiguas`;
+    return `Mostrando las ${recientes} alertas más recientes y, además, ${adicionales} (de ${total} en los últimos ${dias} días)`;
+  }
+  return `Mostrando las ${recientes} más recientes de ${total} en los últimos ${dias} días`;
 }

@@ -131,7 +131,14 @@ describe("ListadoAlertas: se dibuja desde el estado que viene de App (así se co
 });
 
 describe("ListadoAlertas: casos especiales", () => {
-  const base: ListaAlertas = { generadoEn: AHORA, total: 0, truncado: false, datosDeLaboratorio: false, alertas: [] };
+  const base: ListaAlertas = {
+    generadoEn: AHORA,
+    total: 0,
+    truncado: false,
+    composicion: { recientes: 0, criticasYAltasAdicionales: 0 },
+    datosDeLaboratorio: false,
+    alertas: [],
+  };
 
   it("sin alertas en 30 días: mensaje claro y sin tabla ni paginación", () => {
     const h = html(base);
@@ -141,11 +148,34 @@ describe("ListadoAlertas: casos especiales", () => {
     expect(h).not.toContain("Mostrando");
   });
 
-  it("si está truncada, avisa cuántas muestra", async () => {
+  it("si está truncada, avisa cuántas muestra y de cuántas", async () => {
     const lista = await listaMock();
-    const h = html({ ...lista, alertas: lista.alertas.slice(0, 3), total: 1500, truncado: true });
+    const h = html({
+      ...lista,
+      alertas: lista.alertas.slice(0, 3),
+      total: 1500,
+      truncado: true,
+      composicion: { recientes: 3, criticasYAltasAdicionales: 0 },
+    });
     expect(h).toContain("1500 alertas · últimos 30 días");
-    expect(h).toContain("Mostrando las 3 más recientes");
+    expect(h).toContain("Mostrando las 3 más recientes de 1500 en los últimos 30 días");
+  });
+
+  it("si se añadieron críticas o altas sin atender más antiguas, el aviso lo dice", async () => {
+    const lista = await listaMock();
+    const h = html({
+      ...lista,
+      alertas: lista.alertas.slice(0, 5),
+      total: 1500,
+      truncado: true,
+      composicion: { recientes: 3, criticasYAltasAdicionales: 2 },
+    });
+    expect(h).toContain("Mostrando las 3 alertas más recientes y, además, 2 críticas o altas sin atender más antiguas (de 1500 en los últimos 30 días)");
+  });
+
+  it("si la lista está completa no hay aviso", async () => {
+    const lista = await listaMock();
+    expect(html(lista)).not.toContain("lista-aviso");
   });
 
   it("una sola alerta: singular y sin botones de página", async () => {

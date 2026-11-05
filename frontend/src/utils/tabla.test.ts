@@ -18,6 +18,7 @@ import {
   paginar,
   rangoPreset,
   resolverFecha,
+  textoAvisoTruncada,
   textoMostrando,
   textoResumenLista,
   type FiltroFecha,
@@ -519,5 +520,20 @@ describe("calcularVista (filtrar → ordenar → paginar)", () => {
     const v = calcularVista(sesenta, conFiltros(ESTADO_TABLA_INICIAL, filtros({ busqueda: "zzz" })), AHORA);
     expect(v.coincidencias).toBe(0);
     expect(v.pagina).toMatchObject({ items: [], pagina: 1, totalPaginas: 1, total: 0 });
+  });
+});
+
+describe("textoAvisoTruncada", () => {
+  it("solo las más recientes", () => {
+    expect(textoAvisoTruncada({ recientes: 1000, criticasYAltasAdicionales: 0 }, 1500, 30)).toBe(
+      "Mostrando las 1000 más recientes de 1500 en los últimos 30 días",
+    );
+  });
+
+  it("con críticas y altas añadidas, en plural y singular", () => {
+    expect(textoAvisoTruncada({ recientes: 1000, criticasYAltasAdicionales: 613 }, 23000, 30)).toBe(
+      "Mostrando las 1000 alertas más recientes y, además, 613 críticas o altas sin atender más antiguas (de 23000 en los últimos 30 días)",
+    );
+    expect(textoAvisoTruncada({ recientes: 1000, criticasYAltasAdicionales: 1 }, 1500, 30)).toContain("1 crítica o alta sin atender más antigua");
   });
 });

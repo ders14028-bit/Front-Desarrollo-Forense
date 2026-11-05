@@ -30,6 +30,29 @@ describe("nombreLegible", () => {
     expect(nombreLegible("phishing")).toBe("Phishing");
   });
 
+  it("las 14 tácticas MITRE llegan en ASCII y se muestran con tildes", () => {
+    const esperado: Record<string, string> = {
+      reconocimiento: "Reconocimiento",
+      "desarrollo-de-recursos": "Desarrollo de recursos",
+      "acceso-inicial": "Acceso inicial",
+      ejecucion: "Ejecución",
+      persistencia: "Persistencia",
+      "escalada-de-privilegios": "Escalada de privilegios",
+      "evasion-de-defensas": "Evasión de defensas",
+      "acceso-a-credenciales": "Acceso a credenciales",
+      descubrimiento: "Descubrimiento",
+      "movimiento-lateral": "Movimiento lateral",
+      recoleccion: "Recolección",
+      "comando-y-control": "Comando y control",
+      exfiltracion: "Exfiltración",
+      impacto: "Impacto",
+    };
+    for (const [clave, nombre] of Object.entries(esperado)) {
+      expect(clave).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+      expect(nombreLegible(clave)).toBe(nombre);
+    }
+  });
+
   it("herramientas y valores desconocidos", () => {
     expect(nombreLegible("auditd")).toBe("AuditD");
     expect(nombreLegible("wazuh")).toBe("Wazuh");

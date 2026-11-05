@@ -35,6 +35,21 @@ export const NOMBRES_LEGIBLES: Record<string, string> = {
   escalamiento: "Escalamiento",
   correlacion: "Correlación",
   "inteligencia-misp": "Inteligencia MISP",
+  // Tácticas MITRE ATT&CK: el backend manda la clave en ASCII y aquí se le ponen las tildes.
+  reconocimiento: "Reconocimiento",
+  "desarrollo-de-recursos": "Desarrollo de recursos",
+  "acceso-inicial": "Acceso inicial",
+  ejecucion: "Ejecución",
+  persistencia: "Persistencia",
+  "escalada-de-privilegios": "Escalada de privilegios",
+  "evasion-de-defensas": "Evasión de defensas",
+  "acceso-a-credenciales": "Acceso a credenciales",
+  descubrimiento: "Descubrimiento",
+  "movimiento-lateral": "Movimiento lateral",
+  recoleccion: "Recolección",
+  "comando-y-control": "Comando y control",
+  exfiltracion: "Exfiltración",
+  impacto: "Impacto",
 };
 
 /** Ventana de la lista de alertas, en días (igual que la serie por día del resumen). */

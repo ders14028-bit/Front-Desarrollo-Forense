@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch } from
 import { VENTANA_ALERTAS_DIAS } from "../../config";
 import type { ListaAlertas } from "../../types/listaAlertas";
 import { calcularOpciones } from "../../utils/filtros";
-import { calcularVista, hayFiltrosActivos, textoResumenLista, type EstadoTabla, type FiltrosTabla, type Orden } from "../../utils/tabla";
+import { calcularVista, hayFiltrosActivos, textoAvisoTruncada, textoResumenLista, type EstadoTabla, type FiltrosTabla, type Orden } from "../../utils/tabla";
 import type { AccionApp } from "../../estadoApp";
 import { PanelDetalle } from "./detalle/PanelDetalle";
 import { BarraFiltros } from "./filtros/BarraFiltros";
@@ -87,7 +87,7 @@ export function ListadoAlertas({ lista, tabla: estado, dispatch }: Props) {
 
       {lista.truncado && (
         <p className="lista-aviso" role="status">
-          Mostrando las {lista.alertas.length} más recientes
+          {textoAvisoTruncada(lista.composicion, lista.total, VENTANA_ALERTAS_DIAS)}
         </p>
       )}
 

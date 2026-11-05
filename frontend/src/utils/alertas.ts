@@ -57,7 +57,8 @@ interface OpcionesLista {
 
 /**
  * Lista de los últimos `ventanaDias` días en Bogotá (terminando hoy), de la más reciente a la más
- * antigua y con un máximo de `tope`. `total` cuenta la ventana completa; `truncado` avisa si se cortó.
+ * antigua: las `tope` más recientes más todas las críticas y altas sin atender. `total` cuenta la ventana completa;
+ * `truncado` avisa si quedó alguna fuera.
  */
 export function construirListaAlertas(
   alertas: Alerta[],
@@ -72,12 +73,18 @@ export function construirListaAlertas(
     .filter((a) => diaBogota(a._createdAt) >= primerDia) // 'YYYY-MM-DD' se compara como texto
     .sort((x, y) => y._createdAt - x._createdAt);
 
+  // Igual que el backend: las `tope` más recientes MÁS todas las críticas y altas sin atender que queden más atrás.
+  const recientes = enVentana.slice(0, tope);
+  const adicionales = enVentana.slice(tope).filter((a) => a.status === "New" && a.severity >= 3);
+  const incluidas = [...recientes, ...adicionales];
+
   return {
     generadoEn: ahora,
     total: enVentana.length,
-    truncado: enVentana.length > tope,
+    truncado: enVentana.length > incluidas.length,
+    composicion: { recientes: recientes.length, criticasYAltasAdicionales: adicionales.length },
     datosDeLaboratorio: enVentana.some((a) => a.tags.includes(TAG_LABORATORIO)) || casos.some((c) => c.tags.includes(TAG_LABORATORIO)),
-    alertas: enVentana.slice(0, tope).map((a) => filaDesde(a, casoPorId, ahora)),
+    alertas: incluidas.map((a) => filaDesde(a, casoPorId, ahora)),
   };
 }
 

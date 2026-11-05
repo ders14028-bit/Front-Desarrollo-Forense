@@ -169,6 +169,7 @@ describe("construirListaAlertas", () => {
     expect(lista.alertas.map((f) => f.id)).toEqual(["hoy", "5oct"]);
     expect(lista.total).toBe(2);
     expect(lista.truncado).toBe(false);
+    expect(lista.composicion).toEqual({ recientes: 2, criticasYAltasAdicionales: 0 });
     expect(lista.generadoEn).toBe(AHORA);
   });
 
@@ -196,10 +197,48 @@ describe("construirListaAlertas", () => {
     expect(cortada.alertas.map((f) => f.id)).toEqual(["a", "b"]);
     expect(cortada.total).toBe(3);
     expect(cortada.truncado).toBe(true);
+    expect(cortada.composicion).toEqual({ recientes: 2, criticasYAltasAdicionales: 0 });
 
     const completa = construirListaAlertas(tres, [], AHORA, { tope: 3 });
     expect(completa.alertas).toHaveLength(3);
     expect(completa.truncado).toBe(false);
+  });
+
+  it("con tope, añade TODAS las críticas y altas sin atender más antiguas, y solo esas", () => {
+    const lista = construirListaAlertas(
+      [
+        alerta({ _id: "r1", _createdAt: hace(10), severity: 1 }),
+        alerta({ _id: "r2", _createdAt: hace(20), severity: 1 }),
+        alerta({ _id: "critica-vieja", _createdAt: hace(300), severity: 4, status: "New" }),
+        alerta({ _id: "alta-vieja", _createdAt: hace(400), severity: 3, status: "New" }),
+        alerta({ _id: "alta-atendida", _createdAt: hace(500), severity: 3, status: "InProgress" }),
+        alerta({ _id: "media-vieja", _createdAt: hace(600), severity: 2, status: "New" }),
+      ],
+      [],
+      AHORA,
+      { tope: 2 },
+    );
+
+    expect(lista.alertas.map((f) => f.id)).toEqual(["r1", "r2", "critica-vieja", "alta-vieja"]);
+    expect(lista.total).toBe(6);
+    expect(lista.truncado).toBe(true);
+    expect(lista.composicion).toEqual({ recientes: 2, criticasYAltasAdicionales: 2 });
+  });
+
+  it("si todas las que quedan fuera del tope son críticas o altas sin atender, no hay truncado", () => {
+    const lista = construirListaAlertas(
+      [
+        alerta({ _id: "r1", _createdAt: hace(10), severity: 1 }),
+        alerta({ _id: "vieja", _createdAt: hace(300), severity: 4, status: "New" }),
+      ],
+      [],
+      AHORA,
+      { tope: 1 },
+    );
+
+    expect(lista.alertas).toHaveLength(2);
+    expect(lista.truncado).toBe(false);
+    expect(lista.composicion).toEqual({ recientes: 1, criticasYAltasAdicionales: 1 });
   });
 
   it("marca datos de laboratorio si hay alertas o casos con el tag simulacion", () => {
@@ -213,6 +252,7 @@ describe("construirListaAlertas", () => {
       generadoEn: AHORA,
       total: 0,
       truncado: false,
+      composicion: { recientes: 0, criticasYAltasAdicionales: 0 },
       datosDeLaboratorio: false,
       alertas: [],
     });

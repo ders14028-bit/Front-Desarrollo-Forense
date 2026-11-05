@@ -47,13 +47,26 @@ export interface AlertaFila {
   caso: CasoResumen | null;
 }
 
-/** Respuesta de `GET /api/dashboard/alertas`: últimos 30 días, hasta el tope. */
+/** De qué se compone la lista: las más recientes y las críticas/altas sin atender más antiguas que se añadieron. */
+export interface ComposicionLista {
+  /** Las alertas más recientes de la ventana (hasta el tope de 1000). */
+  recientes: number;
+  /** Críticas y altas sin atender MÁS ANTIGUAS que las recientes, añadidas aparte para que ninguna quede fuera. */
+  criticasYAltasAdicionales: number;
+}
+
+/**
+ * Respuesta de `GET /api/dashboard/alertas`: las más recientes de los últimos 30 días (hasta el tope) más todas las
+ * críticas y altas sin atender de esa ventana.
+ */
 export interface ListaAlertas {
   generadoEn: number;
   /** Alertas dentro de la ventana, antes de aplicar el tope. */
   total: number;
-  /** true si `total` supera el tope y `alertas` trae solo las más recientes. */
+  /** true si `total` es mayor que las alertas que vienen en `alertas`. */
   truncado: boolean;
+  /** Cuántas son recientes y cuántas se añadieron por ser críticas o altas sin atender. */
+  composicion: ComposicionLista;
   /** true si hay alertas o casos de prueba ("Datos de laboratorio"). */
   datosDeLaboratorio: boolean;
   /** Más recientes primero. */
