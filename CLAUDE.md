@@ -102,7 +102,7 @@ alerta a caso; tag `simulacion` de los datos de prueba; rutas de los enlaces a T
 
 ## TheHive
 
-- URL: `https://srvlinuxqa.tail2ab6e9.ts.net:8445` (por Tailscale). Organización: `escuelaing`.
+- La URL de TheHive va en `THEHIVE_URL` (no se escribe en el repo; se accede por Tailscale). Organización: `escuelaing`.
 - Headers: `Authorization: Bearer <key>`, `X-Organisation: escuelaing`.
 - Consultas: `{"query":[{"_name":"listAlert"}, ...]}`, `listCase`, `sort`, `page`, `filter`.
 - Para TOTALES usa `{"_name":"count"}`, nunca el largo de una lista paginada.

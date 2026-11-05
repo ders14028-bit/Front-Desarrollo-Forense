@@ -29,6 +29,11 @@ dashboard:
     url: ${THEHIVE_URL:}                      # obligatoria, por ejemplo https://servidor:puerto
     api-key: ${THEHIVE_API_KEY:}              # obligatoria; NUNCA en este archivo
     organizacion: ${THEHIVE_ORG:escuelaing}   # fija: se envía en X-Organisation y el frontend no puede cambiarla
+    limites:
+      timeout-conexion: 5s
+      timeout-lectura: 15s
+      max-respuesta: 20MB        # una respuesta más grande se descarta: una consulta mal armada no debe tumbar la app
+      max-consultas-simultaneas: 4
   cors:
     origenes: ${DASHBOARD_ORIGINS:http://localhost:5173}   # varios, separados por comas
   # SLA de atención en minutos por severidad (CLAUDE.md). Se expone en GET /api/dashboard/configuracion.
