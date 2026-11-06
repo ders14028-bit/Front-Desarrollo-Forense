@@ -61,6 +61,7 @@ dashboard:
     intervalo: 30s              # entre el fin de un refresco y el inicio del siguiente
     espera-primera-carga: 20s   # una petición que llega antes del primer dato espera hasta esto; luego 503
     activo: true                # false apaga el refresco (lo usan las pruebas de la API)
+    lista-en-segundo-plano: false   # true = el refresco también calcula la lista de alertas (consulta extra a TheHive cada ciclo)
   # Métricas de Wazuh: alertas de los últimos días guardadas en memoria (se leen del bloque JSON de la descripción).
   wazuh:
     dias-ventana: 7

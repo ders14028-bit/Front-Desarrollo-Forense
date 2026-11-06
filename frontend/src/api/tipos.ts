@@ -1,4 +1,3 @@
-import type { DetalleAlerta, ListaAlertas } from "../types/listaAlertas";
 import type { ResumenGerencial } from "../types/metricas";
 import type { MetricasWazuh } from "../types/wazuh";
 
@@ -7,10 +6,6 @@ export interface FuenteDatos {
   obtenerResumenGerencial(): Promise<ResumenGerencial>;
   /** Métricas de Wazuh de los últimos días (MITRE, cumplimiento, IPs, usuarios, reglas). Con `estado: "cargando"` todas van en null. */
   obtenerMetricasWazuh(): Promise<MetricasWazuh>;
-  /** Últimos 30 días (tope 1000), sin filtros: filtrar, ordenar y paginar es trabajo del frontend. */
-  listarAlertas(): Promise<ListaAlertas>;
-  /** Alerta completa con su caso y tareas. Rechaza con un ErrorApi si la alerta no existe. */
-  obtenerDetalleAlerta(id: string): Promise<DetalleAlerta>;
 }
 
 /** Error con un mensaje en español listo para mostrar al usuario. */

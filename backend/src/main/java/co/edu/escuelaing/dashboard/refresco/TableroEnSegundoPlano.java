@@ -12,7 +12,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Mantiene el resumen y la lista de alertas al día en segundo plano (cada 30 s, configurable). Las peticiones del
+ * Mantiene el resumen al día en segundo plano (cada 30 s, configurable). La lista de alertas solo se calcula en segundo
+ * plano si {@code dashboard.refresco.lista-en-segundo-plano=true} (por defecto no: la Vista unificada quedó fuera de
+ * alcance); si no, {@code GET /alertas} la calcula bajo demanda. Las peticiones del
  * frontend se sirven desde memoria y nunca esperan a TheHive; si TheHive falla se sigue sirviendo el último dato bueno
  * con {@code thehive.respondio = false}. Solo si todavía no hubo ningún dato bueno la respuesta es 503.
  *
@@ -25,18 +27,26 @@ public class TableroEnSegundoPlano {
     private final FuenteEnSegundoPlano<ResumenGerencial> resumen;
     private final FuenteEnSegundoPlano<ListaAlertas> lista;
     private final ConfiguracionRefresco configuracion;
+    private final AlertasService alertasService;
+    private final Clock reloj;
 
     public TableroEnSegundoPlano(ResumenService resumenService, AlertasService alertasService, Clock reloj,
                                  ConfiguracionRefresco configuracion) {
         this.resumen = new FuenteEnSegundoPlano<>("Resumen", resumenService::calcular, reloj);
         this.lista = new FuenteEnSegundoPlano<>("Lista de alertas", alertasService::calcularLista, reloj);
         this.configuracion = configuracion;
+        this.alertasService = alertasService;
+        this.reloj = reloj;
     }
 
-    /** Recalcula las dos fuentes a la vez. Se programa solo mientras {@code dashboard.refresco.activo} no sea false. */
+    /** Recalcula el resumen (y la lista, si está activada). Se programa solo mientras {@code dashboard.refresco.activo} no sea false. */
     @Scheduled(fixedDelayString = "${dashboard.refresco.intervalo:30s}", initialDelay = 0)
     public void refrescar() {
         CompletableFuture<Void> a = CompletableFuture.runAsync(resumen::refrescar, hilo());
+        if (!configuracion.listaEnSegundoPlano()) {
+            a.join();
+            return;
+        }
         CompletableFuture<Void> b = CompletableFuture.runAsync(lista::refrescar, hilo());
         CompletableFuture.allOf(a, b).join();
     }
@@ -51,8 +61,14 @@ public class TableroEnSegundoPlano {
         return servido.valor().conEstado(new EstadoTheHive(servido.respondio(), servido.consultadoEnMs()));
     }
 
-    /** La lista servida, con el estado de la última consulta a TheHive. */
+    /**
+     * La lista de alertas. Con el refresco en segundo plano de la lista apagado (lo normal) se calcula en el momento,
+     * consultando a TheHive; si TheHive falla, el error sube y se traduce igual que en el detalle.
+     */
     public ListaAlertas lista() {
+        if (!configuracion.listaEnSegundoPlano()) {
+            return alertasService.calcularLista().conEstado(new EstadoTheHive(true, reloj.millis()));
+        }
         Servido<ListaAlertas> servido = servido(lista);
         return servido.valor().conEstado(new EstadoTheHive(servido.respondio(), servido.consultadoEnMs()));
     }

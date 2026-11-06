@@ -1,6 +1,5 @@
 import { generarMocks } from "../mocks";
 import { generarMetricasWazuh } from "../mocks/wazuh";
-import { construirDetalle, construirListaAlertas } from "../utils/alertas";
 import { calcularResumen } from "../utils/metricas";
 import { ErrorApi, type FuenteDatos } from "./tipos";
 
@@ -22,8 +21,7 @@ interface OpcionesMock {
 const esperar = (ms: number) => (ms > 0 ? new Promise<void>((r) => setTimeout(r, ms)) : Promise.resolve());
 
 /**
- * Fuente de datos falsa. Los datos crudos se generan UNA vez, al crearla; el resumen, la lista y
- * el detalle se calculan con la hora actual en CADA llamada, así las antigüedades avanzan como
+ * Fuente de datos falsa. Los datos crudos se generan UNA vez, al crearla; el resumen se calcula con la hora actual en CADA llamada, así las antigüedades avanzan como
  * con datos reales.
  */
 export function crearFuenteMock(opciones: OpcionesMock = {}): FuenteDatos {
@@ -48,19 +46,6 @@ export function crearFuenteMock(opciones: OpcionesMock = {}): FuenteDatos {
     async obtenerMetricasWazuh() {
       await simularRed();
       return generarMetricasWazuh(ahora(), { cargando: wazuhCargando });
-    },
-
-    async listarAlertas() {
-      await simularRed();
-      const lista = construirListaAlertas(alertas, casos, ahora());
-      return { ...lista, thehive: { respondio: true, consultadoEn: lista.generadoEn } };
-    },
-
-    async obtenerDetalleAlerta(id) {
-      await simularRed();
-      const detalle = construirDetalle(id, alertas, casos, tareas, ahora());
-      if (!detalle) throw new ErrorApi("No se encontró la alerta solicitada.");
-      return detalle;
     },
   };
 }

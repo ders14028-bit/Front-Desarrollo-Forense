@@ -165,6 +165,8 @@ class RefrescoTest {
     TheHiveEnMemoria hive;
     RelojAjustable reloj;
     TableroEnSegundoPlano tablero;
+    AlertasService alertasService;
+    ResumenService resumenService;
 
     @BeforeEach
     void preparar() {
@@ -179,7 +181,9 @@ class RefrescoTest {
         var resumen = new ResumenService(cliente, sla, reglas, reloj, new ConteosPorDia(), tacticas,
                 new MuestreoDeTacticas(cliente, consultas, tacticas), consultas);
         var alertas = new AlertasService(cliente, consultas, sla, tacticas, reloj, JSON);
-        tablero = new TableroEnSegundoPlano(resumen, alertas, reloj, new ConfiguracionRefresco(Duration.ofSeconds(30), Duration.ofMillis(100)));
+        resumenService = resumen;
+        alertasService = alertas;
+        tablero = new TableroEnSegundoPlano(resumen, alertas, reloj, new ConfiguracionRefresco(Duration.ofSeconds(30), Duration.ofMillis(100), true));
         hive.alertas.add(alerta("~1", T - 60_000, 4, "New", "wazuh", "wazuh", "x", "wazuh"));
     }
 
@@ -247,5 +251,30 @@ class RefrescoTest {
         assertThatThrownBy(() -> tablero.resumen()).isInstanceOf(DatosNoDisponiblesException.class);
 
         assertThat((System.nanoTime() - inicio) / 1_000_000).as("esperó el tope configurado (100 ms) y no más").isLessThan(3000);
+    }
+
+    @Test
+    void conLaListaEnSegundoPlanoApagadaElRefrescoNoCalculaLaListaYElEndpointLaCalculaBajoDemanda() {
+        var sinLista = new TableroEnSegundoPlano(resumenService, alertasService, reloj,
+                new ConfiguracionRefresco(Duration.ofSeconds(30), Duration.ofMillis(100), false));
+
+        sinLista.refrescar();   // arranque en frío
+        int antesSin = hive.consultas.size();
+        sinLista.refrescar();
+        int consultasSinLista = hive.consultas.size() - antesSin;
+        assertThat(sinLista.resumen().alertas().recibidas()).isEqualTo(1);
+        assertThat(hive.consultas).as("servir el resumen no consulta").hasSize(antesSin + consultasSinLista);
+
+        // un ciclo igual con la lista activada hace MÁS consultas a TheHive
+        var conLista = new TableroEnSegundoPlano(resumenService, alertasService, reloj,
+                new ConfiguracionRefresco(Duration.ofSeconds(30), Duration.ofMillis(100), true));
+        int antesCon = hive.consultas.size();
+        conLista.refrescar();
+        assertThat(hive.consultas.size() - antesCon).as("con la lista activada el refresco consulta más").isGreaterThan(consultasSinLista);
+
+        int antesDeLista = hive.consultas.size();
+        assertThat(sinLista.lista().alertas()).hasSize(1);
+        assertThat(sinLista.lista().thehive().respondio()).isTrue();
+        assertThat(hive.consultas.size()).as("la lista se calcula bajo demanda: consulta a TheHive").isGreaterThan(antesDeLista);
     }
 }

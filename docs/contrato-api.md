@@ -23,16 +23,19 @@ Las reglas de negocio están en `CLAUDE.md`; este documento solo fija la forma d
   error es opcional.
 - **CORS:** el frontend se sirve desde otro origen en desarrollo; el backend (o un proxy) debe
   permitir ese origen para `GET`.
-- **Refresco:** el frontend pide `resumen` y `alertas` cada 30 s y `alertas/{id}` al abrir una alerta
-  (y de nuevo en cada refresco mientras está abierta). Las respuestas deben ser baratas.
+- **Refresco:** el frontend pide `resumen` y `wazuh` cada 30 s. Las respuestas deben ser baratas.
+- **Fuera de alcance:** la Vista unificada ya no existe en el frontend, que NO usa `alertas` ni `alertas/{id}`
+  (secciones 2 y 3). Siguen documentadas porque el backend los conserva; el refresco en segundo plano ya no
+  calcula la lista (`dashboard.refresco.lista-en-segundo-plano`, por defecto `false`): se calcula bajo demanda.
+  Se puede recuperar la vista desde el tag `con-vista-unificada`.
 
 ## Endpoints
 
 | Método | Ruta | Respuesta |
 |---|---|---|
 | GET | `/api/dashboard/resumen` | `ResumenGerencial` |
-| GET | `/api/dashboard/alertas` | `ListaAlertas` |
-| GET | `/api/dashboard/alertas/{id}` | `DetalleAlerta` (`404` si la alerta no existe) |
+| GET | `/api/dashboard/alertas` | `ListaAlertas` (no la usa el frontend; ver «Fuera de alcance») |
+| GET | `/api/dashboard/alertas/{id}` | `DetalleAlerta` (`404` si la alerta no existe; no la usa el frontend) |
 | GET | `/api/dashboard/wazuh` | `MetricasWazuh` (métricas de Wazuh de los últimos 7 días) |
 
 `{id}` es el `_id` de TheHive (por ejemplo `~4513920`); el frontend lo codifica como segmento de URL.
@@ -89,6 +92,8 @@ Notas:
 ---
 
 ## 2. `GET /api/dashboard/alertas` → `ListaAlertas`
+
+> Fuera de alcance: el frontend ya no la usa (se eliminó la Vista unificada). El backend la conserva y la calcula bajo demanda.
 
 Las **1000 alertas más recientes de los últimos 30 días** (hoy y los 29 días anteriores, en Bogotá) **más todas las
 críticas y altas sin atender** de esa ventana, aunque sean más antiguas (así una crítica sin atender nunca queda fuera por el
@@ -188,6 +193,8 @@ Ejemplo (recortado):
 ---
 
 ## 3. `GET /api/dashboard/alertas/{id}` → `DetalleAlerta`
+
+> Fuera de alcance: el frontend ya no la usa. El backend la conserva.
 
 Todos los campos de la alerta, su fila calculada y su caso con las tareas.
 
@@ -344,5 +351,3 @@ interface EstadoTheHive {
 - Si TheHive guarda la fecha exacta en que una alerta se convirtió en caso. Mientras no, la línea de
   tiempo del frontend usa `_createdAt` del caso como fecha de la conversión.
 - Que las alertas de prueba tengan `type = simulacion` (de él depende `datosDeLaboratorio`).
-- Formato exacto de las rutas de los enlaces "Abrir en TheHive" (`frontend/src/config/index.ts`). La URL base
-  no está en el código: sale de `VITE_THEHIVE_URL` y, sin ella, el frontend no muestra los enlaces.
