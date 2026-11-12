@@ -49,6 +49,23 @@ class ArchivoDeConfiguracionTest {
     }
 
     @Test
+    void laVentanaDeWazuhEsDe14DiasYSePuedeCambiar() {
+        assertThat(yml().getProperty("dashboard.wazuh.ventana-dias")).isEqualTo("${DASHBOARD_WAZUH_VENTANA_DIAS:14}");
+        assertThat(yml().getProperty("dashboard.wazuh.dias-ventana")).as("el nombre viejo ya no existe").isNull();
+    }
+
+    @Test
+    void laVentanaFueraDeRangoVuelveAlValorPorDefecto() {
+        var conVentana = (java.util.function.IntFunction<Integer>) d ->
+                new co.edu.escuelaing.dashboard.wazuh.ConfiguracionWazuh(d, null, null, null, null).ventanaDias();
+        assertThat(new co.edu.escuelaing.dashboard.wazuh.ConfiguracionWazuh(null, null, null, null, null).ventanaDias()).isEqualTo(14);
+        assertThat(conVentana.apply(0)).isEqualTo(14);
+        assertThat(conVentana.apply(31)).isEqualTo(14);
+        assertThat(conVentana.apply(1)).isEqualTo(1);
+        assertThat(conVentana.apply(30)).isEqualTo(30);
+    }
+
+    @Test
     void losErroresNoRevelanDetallesInternos() {
         var p = yml();
         assertThat(p.getProperty("server.error.include-stacktrace")).isEqualTo("never");

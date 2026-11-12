@@ -6,7 +6,8 @@ import { ultimosDias } from "../utils/fechas";
  * documentación (RFC 5737), los usuarios son nombres genéricos y todas las cifras están inventadas para el mock.
  */
 
-const DIAS = 7;
+/** El valor por defecto del backend (`dashboard.wazuh.ventana-dias`). */
+const DIAS = 14;
 
 export interface OpcionesWazuhMock {
   /** true = simula la carga inicial del backend: estado "cargando", con progreso y todas las métricas en null. */

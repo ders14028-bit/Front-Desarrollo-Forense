@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { COMPONENTE_OTROS, DIAS_ACTIVOS } from "../../config/activos";
+import { COMPONENTE_OTROS } from "../../config/activos";
 import { useActivos, type ResultadoActivos } from "../../hooks/useActivos";
 import type { Activo, ActivosAtacados } from "../../types/activos";
 import {
@@ -18,7 +18,7 @@ import {
   resumenPorTipo,
   type FiltroActivos,
 } from "../../utils/activos";
-import { formatoHora } from "../../utils/fechas";
+import { formatoHora, textoUltimosDias, tituloConVentana } from "../../utils/fechas";
 import { anchoRelativo, maximoDe } from "../../utils/graficas";
 import { formatoEntero } from "../../utils/numeros";
 import { TarjetaGrafica } from "../graficas/TarjetaGrafica";
@@ -36,11 +36,10 @@ export function SeccionActivos() {
 
 /** Presentación de la sección (se prueba sin navegador). `filtroInicial` solo lo usan las pruebas. */
 export function PanelActivos({ resultado, filtroInicial = SIN_FILTRO }: { resultado: ResultadoActivos; filtroInicial?: FiltroActivos }) {
-  const dias = resultado.datos?.ventanaDias ?? DIAS_ACTIVOS;
   return (
     <section className="seccion" aria-labelledby="titulo-activos">
       <h2 id="titulo-activos" className="seccion__titulo">
-        Activos atacados (últimos {dias} días)
+        {tituloConVentana("Activos atacados", resultado.datos?.ventanaDias)}
       </h2>
       <BloqueCarga resultado={resultado} esqueleto={<CargaWazuh progreso={null} />}>
         {(datos) =>
@@ -60,7 +59,7 @@ function Contenido({ datos, activos, filtroInicial }: { datos: ActivosAtacados; 
   const idSelector = useId();
 
   if (activos.length === 0) {
-    return <EstadoVacio texto={`Aún no hay activos con alertas de Wazuh en los últimos ${datos.ventanaDias} días`} />;
+    return <EstadoVacio texto={`Aún no hay activos con alertas de Wazuh en los ${textoUltimosDias(datos.ventanaDias)}`} />;
   }
 
   const filtrados = ordenarPorAlertas(filtrarActivos(activos, filtro));
@@ -124,7 +123,7 @@ function Contenido({ datos, activos, filtroInicial }: { datos: ActivosAtacados; 
       ) : (
         <>
           <p className="activos-frase" aria-live="polite">
-            {fraseResumen(filtrados) ?? `Ninguno de estos activos tiene alertas en los últimos ${datos.ventanaDias} días.`}
+            {fraseResumen(filtrados) ?? `Ninguno de estos activos tiene alertas en los ${textoUltimosDias(datos.ventanaDias)}.`}
           </p>
           <TarjetasTipo activos={activos} filtro={filtro} alElegir={(tipo) => setFiltro(alternarTipo(filtro, tipo, activos))} />
           <TablaActivos activos={filtrados} filtro={filtro} alElegir={elegirFila} />

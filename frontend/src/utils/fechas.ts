@@ -103,3 +103,13 @@ export function frescuraAlertas(ultimaAlertaEn: number | null | undefined, ahora
     atrasada: ahora - ultimaAlertaEn > FRESCURA_AVISO_MS,
   };
 }
+
+/** "últimos 14 días" (o "último día" si la ventana es de 1). El número sale de la respuesta del backend. */
+export function textoUltimosDias(dias: number): string {
+  return dias === 1 ? "último día" : `últimos ${dias} días`;
+}
+
+/** "Activos atacados (últimos 14 días)". Mientras no se sabe la ventana (sin respuesta aún) va el título solo: no se inventa. */
+export function tituloConVentana(titulo: string, dias: number | null | undefined): string {
+  return dias === null || dias === undefined ? titulo : `${titulo} (${textoUltimosDias(dias)})`;
+}

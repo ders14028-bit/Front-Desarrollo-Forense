@@ -6,7 +6,8 @@ import { ultimosDias } from "../utils/fechas";
  * están inventados para el mock (no son los equipos del laboratorio).
  */
 
-const DIAS = 7;
+/** El valor por defecto del backend (`dashboard.wazuh.ventana-dias`). */
+const DIAS = 14;
 
 type Componentes = Array<[clave: string, alertas: number, altasYCriticas: number]>;
 

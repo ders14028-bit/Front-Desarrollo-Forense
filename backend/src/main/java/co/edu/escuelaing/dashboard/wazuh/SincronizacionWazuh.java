@@ -21,7 +21,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Mantiene en memoria las alertas de Wazuh de los últimos N días (7) para calcular las métricas que salen del bloque
+ * Mantiene en memoria las alertas de Wazuh de los últimos N días ({@code dashboard.wazuh.ventana-dias}, 14 por defecto) para calcular las métricas que salen del bloque
  * JSON de cada una (MITRE, cumplimiento, IP, usuario…), porque no se pueden releer miles de alertas en cada refresco.
  *
  * <ul>
@@ -85,7 +85,7 @@ public class SincronizacionWazuh {
     /** Una pasada: carga inicial (o su continuación) o incremental. Público para las pruebas. */
     public synchronized void sincronizar() {
         final long ahora = reloj.millis();
-        final LocalDate primerDia = DiasBogota.ultimos(ahora, configuracion.diasVentana()).get(0);
+        final LocalDate primerDia = DiasBogota.ultimos(ahora, configuracion.ventanaDias()).get(0);
         final long desde = DiasBogota.inicio(primerDia);
         final long hasta = ahora + 1;   // todas las páginas de esta pasada miran el mismo conjunto
 
@@ -99,7 +99,7 @@ public class SincronizacionWazuh {
             traer(cursor, hasta, total);
             cargaInicialCompleta = true;
             cargaLista = true;
-            log.info("Wazuh: carga inicial lista, {} alertas de los últimos {} días.", almacen.size(), configuracion.diasVentana());
+            log.info("Wazuh: carga inicial lista, {} alertas de los últimos {} días.", almacen.size(), configuracion.ventanaDias());
         } else {
             long inicio = Math.max(desde, ultimoCreado - configuracion.solape().toMillis());
             traer(inicio, hasta, -1);
@@ -107,7 +107,7 @@ public class SincronizacionWazuh {
 
         marcarIntento(true);
         ultimasMetricas = CalculoMetricasWazuh.calcular(almacen.values(), ahora, new EstadoTheHive(true, ahora),
-                configuracion.diasVentana(), primerDia.toString(), configuracion.topN());
+                configuracion.ventanaDias(), primerDia.toString(), configuracion.topN());
     }
 
     /**
@@ -181,8 +181,8 @@ public class SincronizacionWazuh {
         if (metricas != null) {
             return metricas.conEstado(estado);
         }
-        LocalDate primerDia = DiasBogota.ultimos(ahora, configuracion.diasVentana()).get(0);
-        return MetricasWazuh.cargando(ahora, progreso, estado, configuracion.diasVentana(), primerDia.toString());
+        LocalDate primerDia = DiasBogota.ultimos(ahora, configuracion.ventanaDias()).get(0);
+        return MetricasWazuh.cargando(ahora, progreso, estado, configuracion.ventanaDias(), primerDia.toString());
     }
 
     /** Copia de lo que hay en memoria ahora (para el diagnóstico de activos). */

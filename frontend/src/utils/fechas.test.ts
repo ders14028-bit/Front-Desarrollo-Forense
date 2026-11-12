@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diaBogota, diaCorto, etiquetaDia, formatoAntiguedad, formatoFechaHora, formatoHora, frescuraAlertas, textoHace, ultimosDias } from "./fechas";
+import { diaBogota, diaCorto, etiquetaDia, formatoAntiguedad, formatoFechaHora, formatoHora, frescuraAlertas, textoHace, textoUltimosDias, tituloConVentana, ultimosDias } from "./fechas";
 
 // Bogotá es UTC−5 todo el año (sin horario de verano).
 const bogota = (a: number, m: number, d: number, h = 12, min = 0) => Date.UTC(a, m - 1, d, h + 5, min);
@@ -154,5 +154,18 @@ describe("frescuraAlertas", () => {
     expect(textoHace(59 * MIN)).toBe("hace 59 min");
     expect(textoHace(30_000)).toBe("hace menos de 1 min");
     expect(textoHace(-5)).toBe("hace menos de 1 min");
+  });
+});
+
+describe("textoUltimosDias y tituloConVentana", () => {
+  it("el número sale del valor recibido; 1 en singular", () => {
+    expect(textoUltimosDias(14)).toBe("últimos 14 días");
+    expect(textoUltimosDias(1)).toBe("último día");
+    expect(tituloConVentana("Activos atacados", 14)).toBe("Activos atacados (últimos 14 días)");
+  });
+
+  it("sin ventana conocida, solo el título", () => {
+    expect(tituloConVentana("Activos atacados", null)).toBe("Activos atacados");
+    expect(tituloConVentana("Activos atacados", undefined)).toBe("Activos atacados");
   });
 });

@@ -64,7 +64,9 @@ dashboard:
     lista-en-segundo-plano: false   # true = el refresco también calcula la lista de alertas (consulta extra a TheHive cada ciclo)
   # Métricas de Wazuh: alertas de los últimos días guardadas en memoria (se leen del bloque JSON de la descripción).
   wazuh:
-    dias-ventana: 7
+    # Días (Bogotá, contando hoy) que se guardan en memoria; 1–30. Todos los textos "últimos N días" salen de aquí.
+    # Memoria: ~1,6 KB por alerta (100.000 alertas ≈ 160 MB).
+    ventana-dias: ${DASHBOARD_WAZUH_VENTANA_DIAS:14}
     tamano-pagina: 500          # alertas por página en la carga inicial y en las sincronizaciones
     solape: 60s                 # en cada sincronización se retrocede esto desde la última alerta vista
     top-n: 10                   # tamaño de los rankings (IPs, usuarios, reglas, técnicas)

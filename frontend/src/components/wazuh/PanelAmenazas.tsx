@@ -1,7 +1,7 @@
-import { DESCRIPCION_MARCOS, DIAS_WAZUH, TOP_WAZUH } from "../../config/wazuh";
+import { DESCRIPCION_MARCOS, TOP_WAZUH } from "../../config/wazuh";
 import { useWazuh, type ResultadoWazuh } from "../../hooks/useWazuh";
 import type { MetricasWazuh } from "../../types/wazuh";
-import { formatoHora } from "../../utils/fechas";
+import { formatoHora, textoUltimosDias, tituloConVentana } from "../../utils/fechas";
 import { anchoRelativo, maximoDe } from "../../utils/graficas";
 import { formatoEntero } from "../../utils/numeros";
 import { describirRegla, filasTacticas, marcosOrdenados, nombreMarco, primeros, textoCargaWazuh } from "../../utils/wazuh";
@@ -32,12 +32,10 @@ export function CargaWazuh({ progreso }: { progreso: number | null }) {
 
 /** Presentación pura de la sección (se prueba sin navegador). */
 export function PanelAmenazas({ resultado }: { resultado: ResultadoWazuh }) {
-  const dias = resultado.datos?.dias ?? DIAS_WAZUH;
-
   return (
     <section className="seccion" aria-labelledby="titulo-amenazas">
       <h2 id="titulo-amenazas" className="seccion__titulo">
-        Amenazas y cumplimiento (últimos {dias} días)
+        {tituloConVentana("Amenazas y cumplimiento", resultado.datos?.dias)}
       </h2>
       <BloqueCarga resultado={resultado} esqueleto={<CargaWazuh progreso={null} />}>
         {(datos) => (datos.estado === "cargando" ? <CargaWazuh progreso={datos.progreso} /> : <Contenido datos={datos} />)}
@@ -48,13 +46,13 @@ export function PanelAmenazas({ resultado }: { resultado: ResultadoWazuh }) {
 
 function Contenido({ datos }: { datos: MetricasWazuh }) {
   if (datos.alertasAnalizadas === 0) {
-    return <EstadoVacio texto={`Aún no hay alertas de Wazuh con detalle en los últimos ${datos.dias} días`} />;
+    return <EstadoVacio texto={`Aún no hay alertas de Wazuh con detalle en los ${textoUltimosDias(datos.dias)}`} />;
   }
 
   return (
     <div className="amenazas">
       <p className="amenazas__contexto">
-        Basado en {alertasTexto(datos.alertasAnalizadas ?? 0)} de Wazuh de los últimos {datos.dias} días
+        Basado en {alertasTexto(datos.alertasAnalizadas ?? 0)} de Wazuh de los {textoUltimosDias(datos.dias)}
         {datos.sinBloque ? ` · ${formatoEntero(datos.sinBloque)} sin detalle para analizar` : ""}.
       </p>
       {datos.thehive?.respondio === false && (

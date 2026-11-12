@@ -35,6 +35,14 @@ class ActivosControllerTest {
     @Autowired
     ConfiguracionActivos configuracion;
 
+    @Autowired
+    co.edu.escuelaing.dashboard.wazuh.ConfiguracionWazuh wazuh;
+
+    @Test
+    void laVentanaPorDefectoEsDe14Dias() {
+        assertThat(wazuh.ventanaDias()).isEqualTo(14);
+    }
+
     @MockitoBean
     SincronizacionWazuh sincronizacion;
 

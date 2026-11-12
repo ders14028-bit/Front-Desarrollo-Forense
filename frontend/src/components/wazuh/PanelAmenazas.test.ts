@@ -71,7 +71,7 @@ describe("PanelAmenazas: estados", () => {
 
   it("listo pero sin ninguna alerta: frase que explica, sin tarjetas", () => {
     const h = html({ datos: { ...listo(), alertasAnalizadas: 0 } });
-    expect(texto(h)).toContain("Aún no hay alertas de Wazuh con detalle en los últimos 7 días");
+    expect(texto(h)).toContain("Aún no hay alertas de Wazuh con detalle en los últimos 14 días");
     expect(h).not.toContain("tacticas");
   });
 
@@ -85,7 +85,12 @@ describe("PanelAmenazas: contenido", () => {
   const h = html({ datos: listo() });
 
   it("título con los días de la ventana", () => {
-    expect(texto(h)).toContain("Amenazas y cumplimiento (últimos 7 días)");
+    expect(texto(h)).toContain("Amenazas y cumplimiento (últimos 14 días)");
+    const otra = texto(html({ datos: { ...listo(), dias: 30 } }));
+    expect(otra).toContain("Amenazas y cumplimiento (últimos 30 días)");
+    expect(otra).toContain("de Wazuh de los últimos 30 días");
+    // sin respuesta aún: sin número inventado
+    expect(texto(html({ cargando: true }))).not.toContain("últimos");
   });
 
   it("1. tácticas con su nombre con tildes y la frase de negocio al lado", () => {
@@ -137,7 +142,7 @@ describe("PanelAmenazas: contenido", () => {
   });
 
   it("dice con cuántas alertas se calculó y cuántas no traían detalle", () => {
-    expect(texto(h)).toContain("Basado en 18.420 alertas de Wazuh de los últimos 7 días · 37 sin detalle para analizar");
+    expect(texto(h)).toContain("Basado en 18.420 alertas de Wazuh de los últimos 14 días · 37 sin detalle para analizar");
   });
 
   it("una táctica que no está en config/ se muestra sin inventarle una frase", () => {
@@ -178,8 +183,8 @@ describe("mock de Wazuh", () => {
     const m = await fuente.obtenerMetricasWazuh();
 
     expect(m.estado).toBe("listo");
-    expect(m.dias).toBe(7);
-    expect(m.desde).toBe("2026-10-28");
+    expect(m.dias).toBe(14); // el valor por defecto de dashboard.wazuh.ventana-dias
+    expect(m.desde).toBe("2026-10-21"); // 14 días contando el 3 nov
     expect(m.thehive).toEqual({ respondio: true, consultadoEn: AHORA });
     expect(m.cumplimiento!.map((c) => c.marco)).toEqual(["pci_dss", "nist_800_53", "gdpr", "hipaa", "tsc"]);
     expect(m.cumplimiento!.every((c) => c.requisitos.length <= 3)).toBe(true);

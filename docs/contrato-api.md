@@ -36,7 +36,7 @@ Las reglas de negocio están en `CLAUDE.md`; este documento solo fija la forma d
 | GET | `/api/dashboard/resumen` | `ResumenGerencial` |
 | GET | `/api/dashboard/alertas` | `ListaAlertas` (no la usa el frontend; ver «Fuera de alcance») |
 | GET | `/api/dashboard/alertas/{id}` | `DetalleAlerta` (`404` si la alerta no existe; no la usa el frontend) |
-| GET | `/api/dashboard/wazuh` | `MetricasWazuh` (métricas de Wazuh de los últimos 7 días) |
+| GET | `/api/dashboard/wazuh` | `MetricasWazuh` (métricas de Wazuh de los últimos N días; N = `dashboard.wazuh.ventana-dias`, 14 por defecto) |
 | GET | `/api/dashboard/activos` | `ActivosAtacados` (activos y componentes atacados, misma ventana que Wazuh) |
 
 `{id}` es el `_id` de TheHive (por ejemplo `~4513920`); el frontend lo codifica como segmento de URL.
@@ -265,7 +265,7 @@ interface Tarea {
 ## 4. `GET /api/dashboard/wazuh` → `MetricasWazuh`
 
 Métricas que salen del bloque JSON que Wazuh deja en la `description` de cada alerta (MITRE, cumplimiento, IP de origen,
-usuario, regla, agente). El backend guarda en memoria las alertas de Wazuh de los últimos 7 días (Bogotá), sin simulaciones,
+usuario, regla, agente). El backend guarda en memoria las alertas de Wazuh de los últimos N días (Bogotá; `dashboard.wazuh.ventana-dias`, 14 por defecto, 1–30), sin simulaciones,
 y las sincroniza cada 30 s. Responde siempre `200`.
 
 ```ts
@@ -274,7 +274,7 @@ interface MetricasWazuh {
   estado: "cargando" | "listo";
   progreso: number | null;          // 1–99 mientras carga (null si aún no se sabe), 100 cuando está listo. Nunca 0.
   thehive: EstadoTheHive;
-  dias: number;                     // 7
+  dias: number;                     // ventana configurada (14 por defecto). Los textos "últimos N días" salen de aquí
   desde: string;                    // primer día de la ventana, YYYY-MM-DD (Bogotá)
   alertasAnalizadas: number | null; // alertas de la ventana con bloque legible
   sinBloque: number | null;         // alertas de la ventana sin bloque legible (cuentan, pero no aportan)
@@ -301,7 +301,7 @@ interface MetricasWazuh {
 
 ## 5. `GET /api/dashboard/activos` → `ActivosAtacados`
 
-Qué activos (agentes de Wazuh) y qué componentes se atacaron en la misma ventana y caché que `wazuh` (7 días, sin
+Qué activos (agentes de Wazuh) y qué componentes se atacaron en la misma ventana y caché que `wazuh` (N días, sin
 simulaciones). No consulta TheHive: se calcula desde la memoria. Sin filtros en el servidor (son pocos activos; el
 frontend filtra). Responde siempre `200`. **Sin IPs de origen ni usuarios.**
 
@@ -310,7 +310,7 @@ interface ActivosAtacados {
   generadoEn: number;
   estado: "cargando" | "listo";      // el de la sincronización de Wazuh
   progreso: number | null;           // ídem `wazuh`: 1–99 mientras carga, null si no se sabe, 100 listo
-  ventanaDias: number;               // 7
+  ventanaDias: number;               // = `dias` de wazuh (14 por defecto)
   desde: string;                     // YYYY-MM-DD (Bogotá)
   thehive: EstadoTheHive;
   activos: Activo[] | null;          // null mientras carga (nunca []); de más a menos alertas

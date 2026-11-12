@@ -33,6 +33,3 @@ export const NOMBRES_TIPOS: Record<string, string> = {
 };
 
 export const ORDEN_TIPOS: string[] = Object.keys(NOMBRES_TIPOS);
-
-/** Días de la ventana mientras el backend todavía no ha dicho cuántos son. */
-export const DIAS_ACTIVOS = 7;

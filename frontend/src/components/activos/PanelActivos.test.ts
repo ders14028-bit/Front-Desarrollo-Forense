@@ -28,7 +28,9 @@ const texto = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").tri
 describe("PanelActivos: estados", () => {
   it("primera carga: título y 'Cargando…' sin porcentaje", () => {
     const h = html({ cargando: true });
-    expect(texto(h)).toContain("Activos atacados (últimos 7 días)");
+    // sin respuesta aún no se sabe la ventana: el título va solo, sin inventar el número
+    expect(texto(h)).toContain("Activos atacados");
+    expect(texto(h)).not.toContain("últimos");
     expect(texto(h)).toContain("Cargando datos de Wazuh…");
     expect(texto(h)).not.toContain("%");
   });
@@ -54,7 +56,7 @@ describe("PanelActivos: estados", () => {
 
   it("sin activos: frase que explica por qué, sin tabla", () => {
     const h = html({ datos: { ...generarActivos(AHORA), activos: [] } });
-    expect(texto(h)).toContain("Aún no hay activos con alertas de Wazuh en los últimos 7 días");
+    expect(texto(h)).toContain("Aún no hay activos con alertas de Wazuh en los últimos 14 días");
     expect(h).not.toContain("<table");
   });
 
@@ -68,6 +70,15 @@ describe("PanelActivos: estados", () => {
 
 describe("PanelActivos: contenido", () => {
   const datos = generarActivos(AHORA);
+
+  it("los días del título y de los textos salen de la respuesta", () => {
+    expect(texto(html({ datos }))).toContain("Activos atacados (últimos 14 días)");
+    expect(texto(html({ datos: { ...datos, ventanaDias: 30 } }))).toContain("Activos atacados (últimos 30 días)");
+    expect(texto(html({ datos: { ...generarActivos(AHORA, { cargando: true }), ventanaDias: 21 } }))).toContain("(últimos 21 días)");
+    const vacio = texto(html({ datos: { ...datos, ventanaDias: 30, activos: [] } }));
+    expect(vacio).toContain("en los últimos 30 días");
+    expect(vacio).not.toContain("14");
+  });
 
   it("frase, tarjetas por tipo, tabla y componentes con los datos", () => {
     const t = texto(html({ datos }));

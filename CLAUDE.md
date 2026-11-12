@@ -50,7 +50,7 @@ TheHive") quedó FUERA DE ALCANCE y se eliminó del frontend. Se puede recuperar
 **Vista gerencial**
 - Orden: tarjetas de alertas → tarjetas de incidentes → gráficas (severidad, tipo de amenaza con los 5 mayores
   y "Otros", herramienta, alertas por día 7/14/30). Gráficas con CSS, sin librerías.
-- **Activos atacados (últimos 7 días)**: sección entre "Tendencias y distribución" y "Amenazas y cumplimiento",
+- **Activos atacados (últimos N días)**: sección entre "Tendencias y distribución" y "Amenazas y cumplimiento",
   con su propio refresco de 30 s (`GET /api/dashboard/activos`). Filtro propio de la sección (botones por tipo con
   `aria-pressed`, selector de equipo con etiqueta, "Limpiar"); frase resumen, tarjetas por tipo (clic = filtrar), tabla
   "Activos más atacados" (clic en fila = filtrar por equipo; tarjetas en < 720 px) y gráfica "Componentes atacados"
@@ -59,6 +59,9 @@ TheHive") quedó FUERA DE ALCANCE y se eliminó del frontend. Se puede recuperar
 - **Frescura**: debajo del título "Alertas", "Última alerta recibida: 6 nov, 14:05 (hace 3 días)" con
   `alertas.ultimaAlertaEn`; en color de aviso si tiene más de 24 h (`FRESCURA_AVISO_MS` en `config/`), para ver cuándo
   la integración deja de enviar alertas.
+- **Ventana de Wazuh**: `dashboard.wazuh.ventana-dias` (14 por defecto, 1–30; variable `DASHBOARD_WAZUH_VENTANA_DIAS`).
+  Los textos "últimos N días" de Activos y de Amenazas salen de `dias`/`ventanaDias` de la respuesta (nunca un 7 fijo);
+  sin respuesta aún, el título va sin número. La caché ocupa ~1,6 KB por alerta.
 - **Aviso de laboratorio**: UN aviso general "Datos de laboratorio: las cifras vienen de alertas simuladas",
   debajo del encabezado y visible cuando la respuesta trae `datosDeLaboratorio = true`
   (alertas o casos con el tag `simulacion`; PENDIENTE confirmar ese tag). Ya no hay notas por tarjeta.

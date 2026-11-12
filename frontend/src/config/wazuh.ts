@@ -5,9 +5,6 @@ import type { MarcoCumplimiento } from "../types/wazuh";
  * el negocio, escritas para un gerente; no son datos: las cifras siempre salen del backend.
  */
 
-/** Días de la ventana mientras el backend todavía no ha dicho cuántos son (la ventana real viene en la respuesta). */
-export const DIAS_WAZUH = 7;
-
 /** Cuántos elementos muestran las listas pequeñas (IPs, usuarios, reglas) aunque el backend mande más. */
 export const TOP_WAZUH = 5;
 
