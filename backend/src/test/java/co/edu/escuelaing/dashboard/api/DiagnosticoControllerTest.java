@@ -75,6 +75,9 @@ class DiagnosticoControllerTest {
                     .andExpect(jsonPath("$.agentes[0].nombre").value("srv-db"))
                     .andExpect(jsonPath("$.equiposWindows[0].nombre").value("SRV-DB"))
                     .andExpect(jsonPath("$.porOrigen[0].origen").value("sysmon"))
+                    .andExpect(jsonPath("$.gruposPorAgente[0].nombre").value("srv-db"))
+                    .andExpect(jsonPath("$.gruposPorAgente[0].grupos[0].nombre").value("sysmon"))
+                    .andExpect(jsonPath("$.gruposPorAgente[0].grupos[0].cantidad").value(1))
                     .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
         }
 

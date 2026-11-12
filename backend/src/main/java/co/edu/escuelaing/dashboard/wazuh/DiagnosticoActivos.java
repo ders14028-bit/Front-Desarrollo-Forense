@@ -19,12 +19,15 @@ import java.util.regex.Pattern;
  * @param gruposRegla       top 40 de {@code regla.groups}
  * @param ubicaciones       top 20 de {@code ubicacion} (solo alertas con bloque)
  * @param porOrigen         por {@code source} de TheHive: cuántas traen agente o equipo y cuántas no
+ * @param gruposPorAgente   cruce agente × grupo de regla: cada agente (mismo orden que {@code agentes}) con sus 15 grupos
+ *                          más frecuentes
  */
 public record DiagnosticoActivos(int alertasEnCache, boolean cargaInicialLista, int sinBloque, List<Agente> agentes,
                                  List<Conteo> equiposWindows, List<Conteo> gruposRegla, List<Conteo> ubicaciones,
-                                 List<Origen> porOrigen) {
+                                 List<Origen> porOrigen, List<GruposDeAgente> gruposPorAgente) {
 
     public static final int TOP_GRUPOS = 40;
+    public static final int TOP_GRUPOS_POR_AGENTE = 15;
     public static final int TOP_UBICACIONES = 20;
     static final String SIN_VALOR = "(sin valor)";
 
@@ -40,6 +43,10 @@ public record DiagnosticoActivos(int alertasEnCache, boolean cargaInicialLista, 
     public record Origen(String origen, int total, int conAgenteOEquipo, int sinAgenteNiEquipo) {
     }
 
+    /** @param cantidad alertas del agente (todas, tengan o no grupos) */
+    public record GruposDeAgente(String id, String nombre, int cantidad, List<Conteo> grupos) {
+    }
+
     public static DiagnosticoActivos calcular(Collection<AlertaWazuh> alertas, boolean cargaInicialLista) {
         int sinBloque = 0;
         Map<List<String>, Integer> agentes = new HashMap<>();
@@ -47,6 +54,7 @@ public record DiagnosticoActivos(int alertasEnCache, boolean cargaInicialLista, 
         Map<String, Integer> grupos = new HashMap<>();
         Map<String, Integer> ubicaciones = new HashMap<>();
         Map<String, int[]> origenes = new HashMap<>();   // [total, con agente o equipo]
+        Map<List<String>, Map<String, Integer>> gruposDeAgente = new HashMap<>();
 
         for (AlertaWazuh a : alertas) {
             AlertaWazuh.Activo activo = a.activo();
@@ -55,7 +63,12 @@ public record DiagnosticoActivos(int alertasEnCache, boolean cargaInicialLista, 
             }
             boolean hayAgente = a.agente() != null || activo.agenteId() != null;
             if (hayAgente) {
-                agentes.merge(List.of(valor(activo.agenteId()), valor(a.agente())), 1, Integer::sum);
+                List<String> clave = List.of(valor(activo.agenteId()), valor(a.agente()));
+                agentes.merge(clave, 1, Integer::sum);
+                Map<String, Integer> suyos = gruposDeAgente.computeIfAbsent(clave, k -> new HashMap<>());
+                for (String grupo : activo.grupos()) {
+                    suyos.merge(valor(grupo), 1, Integer::sum);
+                }
             }
             if (activo.equipo() != null) {
                 equipos.merge(valor(activo.equipo()), 1, Integer::sum);
@@ -83,8 +96,14 @@ public record DiagnosticoActivos(int alertasEnCache, boolean cargaInicialLista, 
                 .sorted(Comparator.comparingInt(Origen::total).reversed().thenComparing(Origen::origen))
                 .toList();
 
+        List<GruposDeAgente> cruce = listaAgentes.stream()
+                .map(ag -> new GruposDeAgente(ag.id(), ag.nombre(), ag.cantidad(),
+                        top(gruposDeAgente.get(List.of(ag.id(), ag.nombre())), TOP_GRUPOS_POR_AGENTE)))
+                .toList();
+
         return new DiagnosticoActivos(alertas.size(), cargaInicialLista, sinBloque, listaAgentes,
-                top(equipos, Integer.MAX_VALUE), top(grupos, TOP_GRUPOS), top(ubicaciones, TOP_UBICACIONES), listaOrigenes);
+                top(equipos, Integer.MAX_VALUE), top(grupos, TOP_GRUPOS), top(ubicaciones, TOP_UBICACIONES), listaOrigenes,
+                cruce);
     }
 
     private static List<Conteo> top(Map<String, Integer> conteos, int limite) {
