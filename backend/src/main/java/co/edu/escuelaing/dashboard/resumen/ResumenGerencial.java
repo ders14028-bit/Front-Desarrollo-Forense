@@ -15,10 +15,12 @@ public record ResumenGerencial(long generadoEn, boolean datosDeLaboratorio, Resu
         return new ResumenGerencial(generadoEn, datosDeLaboratorio, alertas, casos, estado);
     }
 
+    /** @param ultimaAlertaEn {@code _createdAt} de la alerta más reciente (sin simulaciones), o null si no hay ninguna */
     public record ResumenAlertas(long recibidas, long sinAtender, long criticasYAltas, Long masAntiguaSinAtenderMs,
                                  Long antiguedadPromedioSinAtenderMs, long fueraDeSla,
                                  List<ConteoPorSeveridad> porSeveridad, List<ConteoPorTipo> porTipoAmenaza,
-                                 long sinClasificar, List<ConteoPorOrigen> porOrigen, List<ConteoPorDia> porDia) {
+                                 long sinClasificar, List<ConteoPorOrigen> porOrigen, List<ConteoPorDia> porDia,
+                                 Long ultimaAlertaEn) {
     }
 
     public record ConteoPorSeveridad(int severidad, long cantidad) {

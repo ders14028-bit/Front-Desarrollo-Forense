@@ -156,4 +156,15 @@ describe("AvisoLaboratorio", () => {
     expect(h).toContain('role="note"');
     expect(contar(h, "Datos de laboratorio")).toBe(1);
   });
+
+  it("debajo del título de Alertas: la última alerta recibida, en aviso si tiene más de 24 h", async () => {
+    const r = await resumenMock();
+    const reciente = html({ ...r, alertas: { ...r.alertas, ultimaAlertaEn: r.generadoEn - 30 * 60_000 } });
+    expect(reciente).toMatch(/<p class="frescura">Última alerta recibida: \d{1,2} [a-z]{3}, \d{2}:\d{2} \(hace 30 min\)<\/p>/);
+
+    const vieja = html({ ...r, alertas: { ...r.alertas, ultimaAlertaEn: r.generadoEn - 3 * 86_400_000 } });
+    expect(vieja).toContain('class="frescura frescura--atrasada"');
+    expect(vieja).toContain("(hace 3 días)");
+    expect(vieja).toContain("Más de 24 h sin alertas nuevas");
+  });
 });

@@ -1,4 +1,4 @@
-import { ZONA_HORARIA } from "../config";
+import { FRESCURA_AVISO_MS, ZONA_HORARIA } from "../config";
 
 const MS_DIA = 86_400_000;
 const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -74,4 +74,32 @@ export function formatoAntiguedad(ms: number): string {
   if (horas > 0) return minutos > 0 ? `${horas} h ${minutos} min` : `${horas} h`;
   if (minutos > 0) return `${minutos} min`;
   return "< 1 min";
+}
+
+/** "hace 3 días", "hace 1 día", "hace 5 h", "hace 12 min", "hace menos de 1 min". */
+export function textoHace(ms: number): string {
+  const minutos = Math.floor(Math.max(0, Number.isFinite(ms) ? ms : 0) / 60_000);
+  const dias = Math.floor(minutos / 1440);
+  if (dias > 0) return `hace ${dias} ${dias === 1 ? "día" : "días"}`;
+  if (minutos >= 60) return `hace ${Math.floor(minutos / 60)} h`;
+  if (minutos > 0) return `hace ${minutos} min`;
+  return "hace menos de 1 min";
+}
+
+export interface Frescura {
+  texto: string;
+  /** true = la última alerta tiene más de 24 h (o no hay ninguna): la integración puede haber dejado de enviar. */
+  atrasada: boolean;
+}
+
+/** "Última alerta recibida: 6 nov, 14:05 (hace 3 días)", con la fecha y la hora en Bogotá. */
+export function frescuraAlertas(ultimaAlertaEn: number | null | undefined, ahora: number): Frescura {
+  if (ultimaAlertaEn === null || ultimaAlertaEn === undefined) {
+    return { texto: "Aún no se ha recibido ninguna alerta", atrasada: false };
+  }
+  const fecha = `${diaCorto(diaBogota(ultimaAlertaEn))}, ${formatoHora(ultimaAlertaEn)}`;
+  return {
+    texto: `Última alerta recibida: ${fecha} (${textoHace(ahora - ultimaAlertaEn)})`,
+    atrasada: ahora - ultimaAlertaEn > FRESCURA_AVISO_MS,
+  };
 }

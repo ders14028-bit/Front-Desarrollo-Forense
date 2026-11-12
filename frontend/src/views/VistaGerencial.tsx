@@ -3,7 +3,7 @@ import { BloqueCarga } from "../components/ui/BloqueCarga";
 import { TarjetaEsqueleto, TarjetaMetrica } from "../components/ui/TarjetaMetrica";
 import type { ResultadoResumen } from "../hooks/useResumen";
 import type { ResumenGerencial } from "../types/metricas";
-import { formatoAntiguedad } from "../utils/fechas";
+import { formatoAntiguedad, frescuraAlertas } from "../utils/fechas";
 import { SeccionActivos } from "../components/activos/PanelActivos";
 import { SeccionAmenazas } from "../components/wazuh/PanelAmenazas";
 import { SeccionGraficas } from "./SeccionGraficas";
@@ -21,12 +21,18 @@ const delTotal = (parte: number, total: number): string | undefined => {
 export function SeccionAlertas({ resumen }: { resumen: ResumenGerencial }) {
   const a = resumen.alertas;
   const criticas = a.porSeveridad.find((s) => s.severidad === 4)?.cantidad ?? 0;
+  const frescura = frescuraAlertas(a.ultimaAlertaEn, resumen.generadoEn);
 
   return (
     <section className="seccion" aria-labelledby="titulo-alertas">
       <h2 id="titulo-alertas" className="seccion__titulo">
         Alertas
       </h2>
+      <p className={frescura.atrasada ? "frescura frescura--atrasada" : "frescura"}>
+        {frescura.atrasada && <span className="solo-lectores">Aviso: </span>}
+        {frescura.texto}
+        {frescura.atrasada && <span className="frescura__nota"> · Más de 24 h sin alertas nuevas</span>}
+      </p>
       <div className="rejilla">
         <TarjetaMetrica
           titulo="Alertas recibidas"

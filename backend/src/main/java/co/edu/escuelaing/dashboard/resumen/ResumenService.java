@@ -108,6 +108,8 @@ public class ResumenService {
         var sinAtenderN = async(() -> thehive.contar(alertas(hasta, sinAtender).count()));
         var criticasYAltas = async(() -> thehive.contar(alertas(hasta, Filtro.gte("severity", 3)).count()));
         var masAntigua = async(() -> primeraCreada(alertas(hasta, sinAtender).sort("_createdAt", Orden.ASCENDENTE).page(0, 1)));
+        // Frescura: la alerta más reciente (sin simulaciones). Si deja de cambiar, la integración dejó de enviar alertas.
+        var ultimaCreada = async(() -> primeraCreada(alertas(hasta).sort("_createdAt", Orden.DESCENDENTE).page(0, 1)));
         var promedioCreada = async(() -> promedioCreada(alertas(hasta, sinAtender).promedioDe("_createdAt")));
         var fueraDeSla = new ArrayList<CompletableFuture<Long>>();
         for (int severidad = 1; severidad <= 4; severidad++) {
@@ -161,7 +163,7 @@ public class ResumenService {
         var alertasResumen = new ResumenAlertas(
                 nRecibidas, nSinAtender, esperar(criticasYAltas), antiguaMs, promedioMs, nFueraDeSla,
                 severidades(esperar(porSeveridad)), tipos.porTipo(), tipos.sinClasificar(), origenes(esperar(porOrigen)),
-                porDia.stream().map(ResumenService::esperar).toList());
+                porDia.stream().map(ResumenService::esperar).toList(), esperar(ultimaCreada).orElse(null));
 
         long nCerrados = esperar(cerrados);
         long nConvertidas = esperar(convertidas);

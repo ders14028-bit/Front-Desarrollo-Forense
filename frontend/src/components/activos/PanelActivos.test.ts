@@ -71,8 +71,7 @@ describe("PanelActivos: contenido", () => {
 
   it("frase, tarjetas por tipo, tabla y componentes con los datos", () => {
     const t = texto(html({ datos }));
-    expect(t).toContain("Activo con más alertas altas y críticas: Servidor web (45 de 543 alertas).");
-    expect(t).toContain("Componente más atacado: Servidor web (412 alertas).");
+    expect(t).toContain("El activo con más alertas altas y críticas es Servidor web: 45 de 543. Lo más atacado es Servidor web: 412 alertas.");
     expect(t).toContain("Base de datos · 1");
     expect(t).toContain("Windows · 2");
     expect(t).toContain("2 servidores");
@@ -96,7 +95,7 @@ describe("PanelActivos: contenido", () => {
     expect(h).toMatch(/aria-pressed="true">Windows · 2</);
     expect(h).toMatch(/class="activos-tipo" aria-pressed="true" aria-label="Windows:/);
     const t = texto(h);
-    expect(t).toContain("Activo con más alertas altas y críticas: Servidor Windows 1");
+    expect(t).toContain("El activo con más alertas altas y críticas es Servidor Windows 1:");
     expect(t).not.toContain("Servidor de base de datos 188");
     expect(h).not.toContain("srv-web-demo");
   });

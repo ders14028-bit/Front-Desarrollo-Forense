@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diaBogota, diaCorto, etiquetaDia, formatoAntiguedad, formatoFechaHora, formatoHora, ultimosDias } from "./fechas";
+import { diaBogota, diaCorto, etiquetaDia, formatoAntiguedad, formatoFechaHora, formatoHora, frescuraAlertas, textoHace, ultimosDias } from "./fechas";
 
 // Bogotá es UTC−5 todo el año (sin horario de verano).
 const bogota = (a: number, m: number, d: number, h = 12, min = 0) => Date.UTC(a, m - 1, d, h + 5, min);
@@ -111,5 +111,48 @@ describe("formatoAntiguedad", () => {
     expect(formatoAntiguedad(D)).toBe("1 d");
     expect(formatoAntiguedad(2 * D + 5 * MIN)).toBe("2 d");
     expect(formatoAntiguedad(2 * H + 5 * MIN)).toBe("2 h 5 min");
+  });
+});
+
+describe("frescuraAlertas", () => {
+  const MIN = 60_000;
+  const H = 60 * MIN;
+  const D = 24 * H;
+  // 6 nov 2026, 14:05 en Bogotá (19:05 UTC)
+  const ULTIMA = Date.UTC(2026, 10, 6, 19, 5);
+
+  it("fecha y hora en Bogotá y cuánto hace", () => {
+    expect(frescuraAlertas(ULTIMA, ULTIMA + 3 * D + 2 * H)).toEqual({
+      texto: "Última alerta recibida: 6 nov, 14:05 (hace 3 días)",
+      atrasada: true,
+    });
+  });
+
+  it("más de 24 h = atrasada; justo 24 h todavía no", () => {
+    expect(frescuraAlertas(ULTIMA, ULTIMA + D).atrasada).toBe(false);
+    expect(frescuraAlertas(ULTIMA, ULTIMA + D + 1).atrasada).toBe(true);
+    expect(frescuraAlertas(ULTIMA, ULTIMA + 5 * MIN)).toEqual({
+      texto: "Última alerta recibida: 6 nov, 14:05 (hace 5 min)",
+      atrasada: false,
+    });
+  });
+
+  it("el día es el de Bogotá aunque en UTC ya sea otro", () => {
+    const nocheBogota = Date.UTC(2026, 10, 7, 3, 30); // 6 nov, 22:30 en Bogotá
+    expect(frescuraAlertas(nocheBogota, nocheBogota + H).texto).toBe("Última alerta recibida: 6 nov, 22:30 (hace 1 h)");
+  });
+
+  it("sin alertas lo dice, sin inventar una fecha", () => {
+    expect(frescuraAlertas(null, ULTIMA)).toEqual({ texto: "Aún no se ha recibido ninguna alerta", atrasada: false });
+    expect(frescuraAlertas(undefined, ULTIMA).texto).toBe("Aún no se ha recibido ninguna alerta");
+  });
+
+  it("textoHace: singular, horas, minutos y menos de un minuto", () => {
+    expect(textoHace(D + 5 * H)).toBe("hace 1 día");
+    expect(textoHace(2 * D)).toBe("hace 2 días");
+    expect(textoHace(23 * H + 59 * MIN)).toBe("hace 23 h");
+    expect(textoHace(59 * MIN)).toBe("hace 59 min");
+    expect(textoHace(30_000)).toBe("hace menos de 1 min");
+    expect(textoHace(-5)).toBe("hace menos de 1 min");
   });
 });

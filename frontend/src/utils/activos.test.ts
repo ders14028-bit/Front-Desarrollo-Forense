@@ -114,22 +114,32 @@ describe("agregados", () => {
 describe("fraseResumen", () => {
   it("destaca el de más altas y críticas y el componente con más alertas (sin contar 'Otros')", () => {
     expect(fraseResumen(TODOS)).toBe(
-      "Activo con más alertas altas y críticas: Servidor de base de datos (20 de 500 alertas). " +
-        "Componente más atacado: Servidor web (300 alertas).",
+      "El activo con más alertas altas y críticas es Servidor de base de datos: 20 de 500. " +
+        "Lo más atacado es Servidor web: 300 alertas.",
     );
   });
 
   it("sin altas ni críticas usa el de más alertas", () => {
     expect(fraseResumen([WIN1, activo("7", "Otro", "web", [["servidor-web", 5, 0]])])).toBe(
-      "Activo con más alertas: Servidor Windows 1 (80 alertas; ninguna alta ni crítica). " +
-        "Componente más atacado: Inicio de sesión de Windows (80 alertas).",
+      "El activo con más alertas es Servidor Windows 1: 80 alertas, ninguna alta ni crítica. " +
+        "Lo más atacado es Inicio de sesión de Windows: 80 alertas.",
     );
   });
 
   it("si solo hay 'Otros' no nombra componente; separador de miles es-CO", () => {
     expect(fraseResumen([activo("9", "Nuevo", "sin-clasificar", [["otros", 1200, 0]])])).toBe(
-      "Activo con más alertas: Nuevo (1.200 alertas; ninguna alta ni crítica).",
+      "El activo con más alertas es Nuevo: 1.200 alertas, ninguna alta ni crítica.",
     );
+  });
+
+  it("sin paréntesis dobles aunque el nombre visible traiga paréntesis", () => {
+    const monitoreo = activo("0", "Servidor de monitoreo (Wazuh)", "monitoreo", [["ssh", 11968, 1000], ["monitoreo-wazuh", 6584, 396]]);
+    const frase = fraseResumen([monitoreo])!;
+    expect(frase).toBe(
+      "El activo con más alertas altas y críticas es Servidor de monitoreo (Wazuh): 1.396 de 18.552. " +
+        "Lo más atacado es Acceso remoto (SSH): 11.968 alertas.",
+    );
+    expect(frase).not.toMatch(/\([^()]*\(/);
   });
 
   it("sin alertas devuelve null (nunca inventa un activo)", () => {

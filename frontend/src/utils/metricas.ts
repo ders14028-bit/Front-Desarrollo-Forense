@@ -69,6 +69,7 @@ function resumirAlertas(alertas: Alerta[], ahora: number): ResumenAlertas {
     sinClasificar: tipos.filter((t) => t === null).length,
     porOrigen,
     porDia: ultimosDias(DIAS_SERIE, ahora).map((dia) => ({ dia, cantidad: cuentaDia.get(dia) ?? 0 })),
+    ultimaAlertaEn: alertas.length === 0 ? null : Math.max(...alertas.map((a) => a._createdAt)),
   };
 }
 

@@ -2042,3 +2042,19 @@ main:focus-visible {
 .activos-leyenda--altas {
   background: var(--sev-alta);
 }
+
+/* Frescura: cuándo llegó la última alerta (aviso si pasan más de 24 h) */
+.frescura {
+  margin: calc(-1 * var(--espacio-2)) 0 var(--espacio-3);
+  font-size: 0.875rem;
+  color: var(--texto-suave);
+}
+.frescura--atrasada {
+  padding: var(--espacio-1) var(--espacio-2);
+  font-weight: 600;
+  color: var(--aviso);
+  border-left: 4px solid var(--aviso);
+}
+.frescura__nota {
+  font-weight: 400;
+}

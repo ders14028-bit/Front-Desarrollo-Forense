@@ -1,5 +1,8 @@
 import type { Severidad } from "../types/alerta";
 
+/** Si la última alerta recibida tiene más que esto, la línea de frescura se muestra en color de aviso. */
+export const FRESCURA_AVISO_MS = 24 * 60 * 60 * 1000;
+
 /** SLA de atención por severidad, en minutos. */
 export const SLA_MINUTOS: Record<Severidad, number> = {
   4: 15, // crítica

@@ -1,10 +1,13 @@
 package co.edu.escuelaing.dashboard.api;
 
+import co.edu.escuelaing.dashboard.activos.CalculoActivos;
+import co.edu.escuelaing.dashboard.activos.ConfiguracionActivos;
 import co.edu.escuelaing.dashboard.wazuh.DiagnosticoActivos;
 import co.edu.escuelaing.dashboard.wazuh.SincronizacionWazuh;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Set;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,9 +28,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class DiagnosticoController {
 
     private final SincronizacionWazuh sincronizacion;
+    private final ConfiguracionActivos activos;
 
-    public DiagnosticoController(SincronizacionWazuh sincronizacion) {
+    public DiagnosticoController(SincronizacionWazuh sincronizacion, ConfiguracionActivos activos) {
         this.sincronizacion = sincronizacion;
+        this.activos = activos;
     }
 
     @GetMapping("/diagnostico/wazuh/activos")
@@ -35,7 +40,9 @@ public class DiagnosticoController {
         if (!esLocal(peticion.getRemoteAddr())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return DiagnosticoActivos.calcular(sincronizacion.instantanea(), sincronizacion.cargaInicialLista());
+        return DiagnosticoActivos.calcular(sincronizacion.instantanea(), sincronizacion.cargaInicialLista(),
+                a -> ConfiguracionActivos.OTROS.equals(CalculoActivos.componenteDe(a.activo().grupos(), activos)),
+                Set.copyOf(activos.gruposGenericos()));
     }
 
     /** Solo literales de loopback; nunca se resuelve un nombre por DNS. */

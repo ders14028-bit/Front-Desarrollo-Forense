@@ -118,14 +118,15 @@ export function fraseResumen(activos: Activo[]): string | null {
     hayAltas ? y.altasYCriticas - x.altasYCriticas || y.alertas - x.alertas : y.alertas - x.alertas || y.altasYCriticas - x.altasYCriticas,
   )[0];
 
+  // Sin paréntesis propios: los nombres ya pueden traerlos ("Servidor de monitoreo (Wazuh)").
   const partes = [
     hayAltas
-      ? `Activo con más alertas altas y críticas: ${destacado.nombreVisible} (${formatoEntero(destacado.altasYCriticas)} de ${alertas(destacado.alertas)})`
-      : `Activo con más alertas: ${destacado.nombreVisible} (${alertas(destacado.alertas)}; ninguna alta ni crítica)`,
+      ? `El activo con más alertas altas y críticas es ${destacado.nombreVisible}: ${formatoEntero(destacado.altasYCriticas)} de ${formatoEntero(destacado.alertas)}.`
+      : `El activo con más alertas es ${destacado.nombreVisible}: ${alertas(destacado.alertas)}, ninguna alta ni crítica.`,
   ];
   const componente = componentesAgregados(conAlertas).find((c) => c.clave !== COMPONENTE_OTROS);
-  if (componente) partes.push(`Componente más atacado: ${componente.nombre} (${alertas(componente.alertas)})`);
-  return `${partes.join(". ")}.`;
+  if (componente) partes.push(`Lo más atacado es ${componente.nombre}: ${alertas(componente.alertas)}.`);
+  return partes.join(" ");
 }
 
 export interface OpcionEquipo {

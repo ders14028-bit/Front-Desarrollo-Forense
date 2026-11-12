@@ -49,6 +49,8 @@ export interface ResumenAlertas {
   porOrigen: ConteoPorOrigen[];
   /** Los últimos 30 días en Bogotá, del más antiguo a hoy, con ceros incluidos. */
   porDia: ConteoPorDia[];
+  /** `_createdAt` de la alerta más reciente (sin simulaciones); null si no hay ninguna. */
+  ultimaAlertaEn: number | null;
 }
 
 export interface AlertasConvertidas {

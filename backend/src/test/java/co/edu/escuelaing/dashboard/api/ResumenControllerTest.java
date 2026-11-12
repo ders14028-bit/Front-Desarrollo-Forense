@@ -39,7 +39,7 @@ class ResumenControllerTest {
     private static ResumenGerencial vacio(boolean respondio) {
         var alertas = new ResumenAlertas(0, 0, 0, null, null, 0,
                 List.of(new ConteoPorSeveridad(4, 0), new ConteoPorSeveridad(3, 0), new ConteoPorSeveridad(2, 0), new ConteoPorSeveridad(1, 0)),
-                List.of(), 0, List.of(), List.of(new ConteoPorDia("2026-11-04", 0)));
+                List.of(), 0, List.of(), List.of(new ConteoPorDia("2026-11-04", 0)), null);
         var casos = new ResumenCasos(0, 0, 0, 0, new AlertasConvertidas(0, 0, null), 0, 0, null);
         return new ResumenGerencial(1793800000000L, false, alertas, casos, new EstadoTheHive(respondio, 1793800000000L));
     }

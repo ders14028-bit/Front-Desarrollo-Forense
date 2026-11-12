@@ -67,6 +67,8 @@ interface ResumenAlertas {
   sinClasificar: number;                    // alertas sin etiqueta "escenario:"
   porOrigen: { origen: string; cantidad: number }[];          // por "source"; de mayor a menor
   porDia: { dia: string; cantidad: number }[];                // últimos 30 días Bogotá, del más antiguo a hoy, con ceros
+  ultimaAlertaEn: number | null;   // _createdAt de la alerta más reciente (sort _createdAt desc, page 0-1, sin
+                                   // simulaciones); null si no hay. El frontend avisa si tiene más de 24 h.
 }
 
 interface ResumenCasos {

@@ -78,6 +78,8 @@ class DiagnosticoControllerTest {
                     .andExpect(jsonPath("$.gruposPorAgente[0].nombre").value("srv-db"))
                     .andExpect(jsonPath("$.gruposPorAgente[0].grupos[0].nombre").value("sysmon"))
                     .andExpect(jsonPath("$.gruposPorAgente[0].grupos[0].cantidad").value(1))
+                    // "sysmon" es procesos-windows en application.yml: no cae en "otros"
+                    .andExpect(jsonPath("$.otros.alertas").value(0))
                     .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
         }
 

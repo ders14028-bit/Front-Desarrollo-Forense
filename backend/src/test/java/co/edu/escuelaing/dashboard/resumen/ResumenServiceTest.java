@@ -141,6 +141,16 @@ class ResumenServiceTest {
     }
 
     @Test
+    void laUltimaAlertaRecibidaEsLaMasRecienteSinContarSimulaciones() {
+        assertThat(servicio.calcular().alertas().ultimaAlertaEn()).as("sin alertas no hay fecha").isNull();
+
+        cargarAlertas();
+
+        // ~9 (hace 1 min) es simulación: la más reciente real es ~1, de hace 10 min.
+        assertThat(servicio.calcular().alertas().ultimaAlertaEn()).isEqualTo(T - 10 * MIN);
+    }
+
+    @Test
     void justoEnElLimiteDelSlaTodaviaEstaDentro() {
         hive.alertas.add(alerta("~1", T - 15 * MIN, 4, "New", "wazuh", "wazuh", "x", "wazuh"));
 
@@ -669,7 +679,7 @@ class ResumenServiceTest {
 
         assertThat(nombres(json)).containsExactly("generadoEn", "datosDeLaboratorio", "alertas", "casos", "thehive");
         assertThat(nombres(json.path("alertas"))).containsExactly("recibidas", "sinAtender", "criticasYAltas", "masAntiguaSinAtenderMs",
-                "antiguedadPromedioSinAtenderMs", "fueraDeSla", "porSeveridad", "porTipoAmenaza", "sinClasificar", "porOrigen", "porDia");
+                "antiguedadPromedioSinAtenderMs", "fueraDeSla", "porSeveridad", "porTipoAmenaza", "sinClasificar", "porOrigen", "porDia", "ultimaAlertaEn");
         assertThat(nombres(json.path("casos"))).containsExactly("reportados", "abiertos", "enProgreso", "cerrados", "alertasConvertidas",
                 "contencionesHechas", "confirmadosYCerrados", "tiempoPromedioCierreMs");
         assertThat(nombres(json.path("casos").path("alertasConvertidas"))).containsExactly("convertidas", "total", "porcentaje");
