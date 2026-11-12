@@ -58,6 +58,7 @@ public class SincronizacionWazuh {
     private volatile boolean hayIntento;
     private volatile boolean ultimoIntentoBueno = true;
     private volatile long ultimoIntentoMs;
+    private volatile boolean cargaLista;
 
     public SincronizacionWazuh(TheHiveClient thehive, ConsultasDashboard consultas, ConfiguracionWazuh configuracion, Clock reloj) {
         this.thehive = thehive;
@@ -97,6 +98,7 @@ public class SincronizacionWazuh {
             }
             traer(cursor, hasta, total);
             cargaInicialCompleta = true;
+            cargaLista = true;
             log.info("Wazuh: carga inicial lista, {} alertas de los últimos {} días.", almacen.size(), configuracion.diasVentana());
         } else {
             long inicio = Math.max(desde, ultimoCreado - configuracion.solape().toMillis());
@@ -181,6 +183,15 @@ public class SincronizacionWazuh {
         }
         LocalDate primerDia = DiasBogota.ultimos(ahora, configuracion.diasVentana()).get(0);
         return MetricasWazuh.cargando(ahora, progreso, estado, configuracion.diasVentana(), primerDia.toString());
+    }
+
+    /** Copia de lo que hay en memoria ahora (para el diagnóstico de activos). */
+    public List<AlertaWazuh> instantanea() {
+        return List.copyOf(almacen.values());
+    }
+
+    public boolean cargaInicialLista() {
+        return cargaLista;
     }
 
     int alertasGuardadas() {

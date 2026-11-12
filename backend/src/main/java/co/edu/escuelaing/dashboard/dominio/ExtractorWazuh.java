@@ -82,7 +82,8 @@ public final class ExtractorWazuh {
                 texto(agente.path("name")),
                 texto(agente.path("ip")),
                 texto(raiz.path("ubicacion")),
-                datosUsados));
+                datosUsados,
+                texto(datos.path("win").path("system").path("computer"))));
     }
 
     /** Valor simple como texto, o null si falta, es null o no es un valor simple. Los espacios sobrantes se quitan. */

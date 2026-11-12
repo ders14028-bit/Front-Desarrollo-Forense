@@ -69,3 +69,5 @@ dashboard:
     solape: 60s                 # en cada sincronización se retrocede esto desde la última alerta vista
     top-n: 10                   # tamaño de los rankings (IPs, usuarios, reglas, técnicas)
     tipo-alerta: wazuh          # type de las alertas que vienen de Wazuh
+  # true = expone GET /diagnostico/wazuh/activos (solo nombres y conteos, solo desde 127.0.0.1). Apagado por defecto.
+  diagnostico: ${DASHBOARD_DIAGNOSTICO:false}

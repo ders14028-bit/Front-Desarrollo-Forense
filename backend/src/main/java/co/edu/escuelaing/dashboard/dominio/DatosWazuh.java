@@ -11,11 +11,13 @@ import java.util.Map;
  * @param cumplimiento  normativas por nombre ({@code pci_dss}, {@code nist_800_53}, {@code gdpr}, {@code hipaa},
  *                      {@code tsc}, {@code gpg13}); solo las que vienen
  * @param datos         campos de {@code datos} que usa el dashboard (srcip, srcport, srcuser, dstuser…); el resto se ignora
+ * @param equipoWindows {@code datos.win.system.computer} (eventos de Windows/Sysmon), o {@code null}
  */
 public record DatosWazuh(String fechaWazuh, String reglaId, Integer reglaNivel, String reglaDescripcion,
                          List<String> idsMitre, List<String> tacticas, List<String> tecnicas, List<String> grupos,
                          Map<String, List<String>> cumplimiento, String agenteId, String agenteNombre,
-                         String agenteIp, String ubicacion, Map<String, String> datos) {
+                         String agenteIp, String ubicacion, Map<String, String> datos,
+                         String equipoWindows) {
 
     public DatosWazuh {
         idsMitre = copia(idsMitre);
