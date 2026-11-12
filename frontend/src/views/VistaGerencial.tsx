@@ -4,6 +4,7 @@ import { TarjetaEsqueleto, TarjetaMetrica } from "../components/ui/TarjetaMetric
 import type { ResultadoResumen } from "../hooks/useResumen";
 import type { ResumenGerencial } from "../types/metricas";
 import { formatoAntiguedad } from "../utils/fechas";
+import { SeccionActivos } from "../components/activos/PanelActivos";
 import { SeccionAmenazas } from "../components/wazuh/PanelAmenazas";
 import { SeccionGraficas } from "./SeccionGraficas";
 
@@ -143,6 +144,7 @@ export function VistaGerencial({ resumen }: { resumen: ResultadoResumen }) {
           <SeccionAlertas resumen={datos} />
           <SeccionCasos resumen={datos} />
           <SeccionGraficas resumen={datos} />
+          <SeccionActivos />
           <SeccionAmenazas />
         </>
       )}

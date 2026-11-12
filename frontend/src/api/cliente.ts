@@ -17,3 +17,4 @@ const fuente: FuenteDatos = modoMock ? crearFuenteMock() : crearFuenteHttp(impor
 
 export const obtenerResumenGerencial = () => fuente.obtenerResumenGerencial();
 export const obtenerMetricasWazuh = () => fuente.obtenerMetricasWazuh();
+export const obtenerActivos = () => fuente.obtenerActivos();

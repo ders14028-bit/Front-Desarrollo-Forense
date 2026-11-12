@@ -38,12 +38,24 @@ public record AlertaWazuh(String id, long creadaEn, boolean conBloque, String re
      * @param equipo    {@code datos.win.system.computer} (eventos de Windows/Sysmon)
      * @param ubicacion {@code ubicacion}: el log de origen (EventChannel, journald, /var/log/auth.log…)
      * @param grupos    {@code regla.groups}, sin espacios sobrantes
+     * @param severidad {@code severity} de TheHive (1 baja, 2 media, 3 alta, 4 crítica)
      */
-    public record Activo(String origen, String agenteId, String equipo, String ubicacion, List<String> grupos) {
-        public static final Activo VACIO = new Activo(null, null, null, null, List.of());
+    public record Activo(String origen, String agenteId, String equipo, String ubicacion, List<String> grupos, int severidad) {
+        public static final Activo VACIO = new Activo(null, null, null, null, List.of(), 1);
 
         public Activo {
             grupos = grupos == null ? List.of() : List.copyOf(grupos);
+            severidad = Math.max(1, Math.min(4, severidad));
+        }
+
+        /** Con severidad baja (las pruebas que no la necesitan). */
+        public Activo(String origen, String agenteId, String equipo, String ubicacion, List<String> grupos) {
+            this(origen, agenteId, equipo, ubicacion, grupos, 1);
+        }
+
+        /** "Altas y críticas" = severidad 3 o 4. */
+        public boolean altaOCritica() {
+            return severidad >= 3;
         }
     }
 
@@ -71,7 +83,7 @@ public record AlertaWazuh(String id, long creadaEn, boolean conBloque, String re
         }
         if (datos.isEmpty()) {
             return new AlertaWazuh(alerta.id(), alerta.creadaEn(), false, null, null, null, List.of(), List.of(), Map.of(), null, null, null,
-                    new Activo(origenDe(alerta), null, null, null, List.of()));
+                    new Activo(origenDe(alerta), null, null, null, List.of(), alerta.severidad()));
         }
         DatosWazuh d = datos.get();
         Map<String, List<String>> controles = new LinkedHashMap<>();
@@ -83,7 +95,8 @@ public record AlertaWazuh(String id, long creadaEn, boolean conBloque, String re
         }
         return new AlertaWazuh(alerta.id(), alerta.creadaEn(), true, d.reglaId(), d.reglaNivel(), d.reglaDescripcion(),
                 d.tacticas(), tecnicasDe(d), controles, d.datos().get("srcip"), d.datos().get("srcuser"), d.agenteNombre(),
-                new Activo(origenDe(alerta), d.agenteId(), d.equipoWindows(), d.ubicacion(), d.grupos()));
+                new Activo(origenDe(alerta), d.agenteId(), d.equipoWindows(), d.ubicacion(), d.grupos(),
+                        alerta.severidad()));
     }
 
     private static String origenDe(Alerta alerta) {

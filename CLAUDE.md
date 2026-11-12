@@ -29,7 +29,7 @@ TheHive") quedó FUERA DE ALCANCE y se eliminó del frontend. Se puede recuperar
 ## Decisiones de diseño del frontend
 
 **API y datos**
-- **Contrato de `src/api/`** (`FuenteDatos`): `obtenerResumenGerencial()` y `obtenerMetricasWazuh()`.
+- **Contrato de `src/api/`** (`FuenteDatos`): `obtenerResumenGerencial()`, `obtenerMetricasWazuh()` y `obtenerActivos()`.
   Tipos y endpoints en `docs/contrato-api.md`, que es lo que debe cumplir el backend. El backend devuelve
   métricas YA AGREGADAS; las reglas están en `src/utils/` (`metricas.ts`).
 - **Mocks**: se generan AL CARGAR LA APP (módulos en `src/mocks/`), con un generador de números
@@ -50,6 +50,12 @@ TheHive") quedó FUERA DE ALCANCE y se eliminó del frontend. Se puede recuperar
 **Vista gerencial**
 - Orden: tarjetas de alertas → tarjetas de incidentes → gráficas (severidad, tipo de amenaza con los 5 mayores
   y "Otros", herramienta, alertas por día 7/14/30). Gráficas con CSS, sin librerías.
+- **Activos atacados (últimos 7 días)**: sección entre "Tendencias y distribución" y "Amenazas y cumplimiento",
+  con su propio refresco de 30 s (`GET /api/dashboard/activos`). Filtro propio de la sección (botones por tipo con
+  `aria-pressed`, selector de equipo con etiqueta, "Limpiar"); frase resumen, tarjetas por tipo (clic = filtrar), tabla
+  "Activos más atacados" (clic en fila = filtrar por equipo; tarjetas en < 720 px) y gráfica "Componentes atacados"
+  ("Otros" al final, en gris). Filtrado, agregados y frase son funciones puras en `src/utils/activos.ts`; los nombres de
+  componentes y tipos, en `src/config/activos.ts`.
 - **Aviso de laboratorio**: UN aviso general "Datos de laboratorio: las cifras vienen de alertas simuladas",
   debajo del encabezado y visible cuando la respuesta trae `datosDeLaboratorio = true`
   (alertas o casos con el tag `simulacion`; PENDIENTE confirmar ese tag). Ya no hay notas por tarjeta.
@@ -66,6 +72,15 @@ TheHive") quedó FUERA DE ALCANCE y se eliminó del frontend. Se puede recuperar
   (`renderToStaticMarkup`, sin jsdom). El foco y el teclado (p. ej. "Saltar al contenido") se revisan a mano en
   el navegador. Las pruebas deben pasar también con `TZ=UTC`.
 - **Ramas**: el frontend se desarrolla en `feature/frontend`.
+
+**Activos (backend)**
+- Inventario de agentes (`dashboard.activos.inventario`: id, nombre técnico, tipo, nombre visible, sistema) y tabla
+  ORDENADA de componentes por grupos de regla (`dashboard.activos.componentes`, primero que coincide gana; los
+  `grupos-genericos` no definen componente; si nada coincide, `otros`) en `application.yml`. Agente fuera del
+  inventario → `sin-clasificar`, sistema deducido de sus alertas. Se calcula desde la caché de Wazuh (que guarda la
+  severidad de TheHive; "altas y críticas" = 3 o 4). Mientras carga, `activos = null`.
+- Diagnóstico: `GET /diagnostico/wazuh/activos`, apagado por defecto (`DASHBOARD_DIAGNOSTICO=true`), solo desde
+  127.0.0.1, solo nombres y conteos (agentes, equipos Windows, grupos, ubicaciones, por `source` y agente × grupo).
 
 **Para el backend (anotado en `docs/contrato-api.md`, aún no implementado en el frontend)**
 - Los endpoints `GET /api/dashboard/alertas` y `/alertas/{id}` siguen existiendo pero el frontend no los usa. El

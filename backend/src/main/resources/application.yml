@@ -69,5 +69,32 @@ dashboard:
     solape: 60s                 # en cada sincronización se retrocede esto desde la última alerta vista
     top-n: 10                   # tamaño de los rankings (IPs, usuarios, reglas, técnicas)
     tipo-alerta: wazuh          # type de las alertas que vienen de Wazuh
+  # Activos atacados (GET /api/dashboard/activos), calculados desde la caché de Wazuh.
+  activos:
+    # Agentes de Wazuh conocidos: se reconocen por agente-id y, como respaldo, por nombre. Uno que no esté aquí sale como
+    # "sin-clasificar" con su nombre técnico y el sistema deducido de sus alertas.
+    inventario:
+      - { agente-id: "000", nombre: wazuh-server,     tipo: monitoreo,     nombre-visible: "Servidor de monitoreo (Wazuh)", sistema: Linux }
+      - { agente-id: "003", nombre: ip-172-31-20-112, tipo: base-de-datos, nombre-visible: "Servidor de base de datos",     sistema: Linux }
+      - { agente-id: "004", nombre: ip-172-31-28-141, tipo: web,           nombre-visible: "Servidor web",                  sistema: Linux }
+      - { agente-id: "001", nombre: linux-client,     tipo: estacion,      nombre-visible: "Estación de trabajo Linux",     sistema: Linux }
+      - { agente-id: "002", nombre: EC2AMAZ-3RGFDQN,  tipo: windows,       nombre-visible: "Servidor Windows 1",            sistema: Windows }
+      - { agente-id: "005", nombre: EC2AMAZ-N9EMRIA,  tipo: windows,       nombre-visible: "Servidor Windows 2",            sistema: Windows }
+    # ORDENADA: a cada alerta se le asigna el PRIMER componente que coincida con sus grupos de regla; si ninguno, "otros".
+    componentes:
+      - { clave: base-de-datos,         grupos: [mariadb_lab, mysql, mssql, postgresql] }
+      - { clave: servidor-web,          grupos: [web_server_lab, lab_webserver, apache, nginx, web] }
+      - { clave: ssh,                   grupos: [sshd] }
+      - { clave: inicio-sesion-windows, grupos: [windows_security] }
+      - { clave: procesos-windows,      grupos: [sysmon], prefijos: [sysmon_] }
+      - { clave: sistema-windows,       grupos: [windows_application, windows_system, WEF, win_evt_channel] }
+      - { clave: cuentas-permisos,      grupos: [pam, sudo, adduser] }
+      - { clave: auditoria,             grupos: [audit, audit_selinux, audit_configuration, apparmor] }
+      - { clave: vulnerabilidades,      grupos: [vulnerability-detector, dpkg] }
+      - { clave: integridad,            grupos: [rootcheck, syscheck] }
+      - { clave: monitoreo-wazuh,       grupos: [ossec] }
+    # No dicen QUÉ se atacó: nunca definen componente.
+    grupos-genericos: [syslog, authentication_failed, invalid_login, authentication_success, authentication_failures,
+                       config_changed, access_control, local, system_error, time_changed, stats, errors]
   # true = expone GET /diagnostico/wazuh/activos (solo nombres y conteos, solo desde 127.0.0.1). Apagado por defecto.
   diagnostico: ${DASHBOARD_DIAGNOSTICO:false}

@@ -1,4 +1,5 @@
 import type { ResumenGerencial } from "../types/metricas";
+import type { ActivosAtacados } from "../types/activos";
 import type { MetricasWazuh } from "../types/wazuh";
 import { ErrorApi, type FuenteDatos } from "./tipos";
 
@@ -72,6 +73,13 @@ export function crearFuenteHttp(baseUrl: string, opciones: OpcionesHttp = {}): F
       const datos = await pedir("/api/dashboard/wazuh");
       if (!esObjeto(datos) || (datos.estado !== "cargando" && datos.estado !== "listo")) throw new ErrorApi(FORMATO_INESPERADO);
       return datos as unknown as MetricasWazuh;
+    },
+
+    async obtenerActivos() {
+      const datos = await pedir("/api/dashboard/activos");
+      if (!esObjeto(datos) || (datos.estado !== "cargando" && datos.estado !== "listo")) throw new ErrorApi(FORMATO_INESPERADO);
+      if (datos.estado === "listo" && !Array.isArray(datos.activos)) throw new ErrorApi(FORMATO_INESPERADO);
+      return datos as unknown as ActivosAtacados;
     },
 
   };

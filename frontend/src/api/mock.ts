@@ -1,4 +1,5 @@
 import { generarMocks } from "../mocks";
+import { generarActivos } from "../mocks/activos";
 import { generarMetricasWazuh } from "../mocks/wazuh";
 import { calcularResumen } from "../utils/metricas";
 import { ErrorApi, type FuenteDatos } from "./tipos";
@@ -46,6 +47,11 @@ export function crearFuenteMock(opciones: OpcionesMock = {}): FuenteDatos {
     async obtenerMetricasWazuh() {
       await simularRed();
       return generarMetricasWazuh(ahora(), { cargando: wazuhCargando });
+    },
+
+    async obtenerActivos() {
+      await simularRed();
+      return generarActivos(ahora(), { cargando: wazuhCargando });
     },
   };
 }

@@ -23,7 +23,7 @@ Las reglas de negocio están en `CLAUDE.md`; este documento solo fija la forma d
   error es opcional.
 - **CORS:** el frontend se sirve desde otro origen en desarrollo; el backend (o un proxy) debe
   permitir ese origen para `GET`.
-- **Refresco:** el frontend pide `resumen` y `wazuh` cada 30 s. Las respuestas deben ser baratas.
+- **Refresco:** el frontend pide `resumen`, `wazuh` y `activos` cada 30 s. Las respuestas deben ser baratas.
 - **Fuera de alcance:** la Vista unificada ya no existe en el frontend, que NO usa `alertas` ni `alertas/{id}`
   (secciones 2 y 3). Siguen documentadas porque el backend los conserva; el refresco en segundo plano ya no
   calcula la lista (`dashboard.refresco.lista-en-segundo-plano`, por defecto `false`): se calcula bajo demanda.
@@ -37,6 +37,7 @@ Las reglas de negocio están en `CLAUDE.md`; este documento solo fija la forma d
 | GET | `/api/dashboard/alertas` | `ListaAlertas` (no la usa el frontend; ver «Fuera de alcance») |
 | GET | `/api/dashboard/alertas/{id}` | `DetalleAlerta` (`404` si la alerta no existe; no la usa el frontend) |
 | GET | `/api/dashboard/wazuh` | `MetricasWazuh` (métricas de Wazuh de los últimos 7 días) |
+| GET | `/api/dashboard/activos` | `ActivosAtacados` (activos y componentes atacados, misma ventana que Wazuh) |
 
 `{id}` es el `_id` de TheHive (por ejemplo `~4513920`); el frontend lo codifica como segmento de URL.
 
@@ -293,6 +294,51 @@ interface MetricasWazuh {
 - Empates: por nombre ascendente. `tecnicas` y los rankings traen 10; el frontend muestra 5.
 - Si TheHive falla después de la carga, se siguen sirviendo las últimas métricas con `thehive.respondio = false`.
 - El tipo de amenaza del resumen y la lista usa la misma regla → táctica MITRE (ver `porTipoAmenaza`).
+
+---
+
+## 5. `GET /api/dashboard/activos` → `ActivosAtacados`
+
+Qué activos (agentes de Wazuh) y qué componentes se atacaron en la misma ventana y caché que `wazuh` (7 días, sin
+simulaciones). No consulta TheHive: se calcula desde la memoria. Sin filtros en el servidor (son pocos activos; el
+frontend filtra). Responde siempre `200`. **Sin IPs de origen ni usuarios.**
+
+```ts
+interface ActivosAtacados {
+  generadoEn: number;
+  estado: "cargando" | "listo";      // el de la sincronización de Wazuh
+  progreso: number | null;           // ídem `wazuh`: 1–99 mientras carga, null si no se sabe, 100 listo
+  ventanaDias: number;               // 7
+  desde: string;                     // YYYY-MM-DD (Bogotá)
+  thehive: EstadoTheHive;
+  activos: Activo[] | null;          // null mientras carga (nunca []); de más a menos alertas
+  alertasSinActivo: number | null;   // alertas sin agente: no se asignan a ningún activo
+}
+interface Activo {
+  agenteId: string | null;           // id de agente de Wazuh ("003")
+  equipo: string | null;             // nombre técnico del agente
+  nombreVisible: string;             // "Servidor de base de datos"
+  tipo: string;                      // monitoreo | base-de-datos | web | estacion | windows | sin-clasificar
+  sistema: string;                   // Linux | Windows
+  alertas: number;
+  altasYCriticas: number;            // severidad de TheHive 3 o 4
+  componentePrincipal: string | null;// el de más alertas; null si no tiene alertas
+  componentes: { clave: string; alertas: number; altasYCriticas: number }[];  // de mayor a menor; SUMAN `alertas`
+}
+```
+
+- **Inventario** (`dashboard.activos.inventario` en application.yml): cada agente se reconoce por `agente-id` y, como
+  respaldo, por `nombre` (sin distinguir mayúsculas). Los del inventario salen aunque no tengan alertas (con 0).
+- **Agente que no está en el inventario:** `tipo = "sin-clasificar"`, `nombreVisible` = su nombre técnico y `sistema`
+  deducido de sus alertas (grupos `windows`/`windows_*`/`sysmon*`, log `EventChannel` o `win.system.computer` →
+  Windows; si no, Linux). Ninguno se pierde.
+- **Componente** (`dashboard.activos.componentes`, tabla ORDENADA): a cada alerta se le asigna el PRIMER componente de
+  la tabla que coincida con alguno de sus grupos de regla (`regla.groups`), sin contar los `grupos-genericos`
+  (syslog, authentication_failed…); si ninguno coincide, `otros`. Cada alerta cuenta en un solo componente.
+  Claves: `base-de-datos`, `servidor-web`, `ssh`, `inicio-sesion-windows`, `procesos-windows`, `sistema-windows`,
+  `cuentas-permisos`, `auditoria`, `vulnerabilidades`, `integridad`, `monitoreo-wazuh`, `otros`. El frontend las
+  traduce (`config/activos.ts`).
+- Empates de componentes: en el orden de la tabla. Empates de activos: más altas y críticas, luego por nombre visible.
 
 ---
 
