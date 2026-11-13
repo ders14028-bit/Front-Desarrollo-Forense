@@ -193,6 +193,11 @@ public record DiagnosticoActivos(int alertasEnCache, boolean cargaInicialLista, 
         if (texto == null || texto.isBlank()) {
             return SIN_VALOR;
         }
+        return sinIps(texto);
+    }
+
+    /** El texto sin espacios sobrantes y con cada IP (v4 o v6) reemplazada por {@code <ip>}. Lo comparten el diagnóstico y los ataques recientes. */
+    public static String sinIps(String texto) {
         String sinIpv4 = IPV4.matcher(texto.strip()).replaceAll("<ip>");
         return IPV6.matcher(sinIpv4).replaceAll("<ip>");
     }

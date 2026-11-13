@@ -56,6 +56,13 @@ TheHive") quedó FUERA DE ALCANCE y se eliminó del frontend. Se puede recuperar
   "Activos más atacados" (clic en fila = filtrar por equipo; tarjetas en < 720 px) y gráfica "Componentes atacados"
   ("Otros" al final, en gris). Filtrado, agregados y frase son funciones puras en `src/utils/activos.ts`; los nombres de
   componentes y tipos, en `src/config/activos.ts`.
+  - **Último ataque**: la tabla tiene la columna "Último ataque" (`ultimoAtaqueEn`: "13 nov, 16:20" de Bogotá y debajo
+    "hace 2 h"; "—" si no tiene) y la tarjeta del celular una línea más. **Ataques recientes**: bloque debajo de la tabla y
+    antes de "Componentes atacados" (`ataquesRecientes`: altas y críticas por activo + regla; fecha, activo,
+    componente, severidad con texto Crítica/Alta, descripción de la regla traducida si está en el diccionario y "N veces
+    desde <fecha>"). Primero se aplica el filtro de la sección (tipo y equipo) y después se muestran los 10 más
+    recientes, con "Ver más" hasta 20; vacío: "No hay ataques altos o críticos en los últimos N días". El "hace N" se
+    cuenta desde `generadoEn` (hora del resumen), nunca desde el reloj del navegador.
 - **Frescura**: debajo del título "Alertas", "Última alerta recibida: 6 nov, 14:05 (hace 3 días)" con
   `alertas.ultimaAlertaEn`; en color de aviso si tiene más de 24 h (`FRESCURA_AVISO_MS` en `config/`), para ver cuándo
   la integración deja de enviar alertas.
@@ -85,6 +92,11 @@ TheHive") quedó FUERA DE ALCANCE y se eliminó del frontend. Se puede recuperar
   `grupos-genericos` no definen componente; si nada coincide, `otros`) en `application.yml`. Agente fuera del
   inventario → `sin-clasificar`, sistema deducido de sus alertas. Se calcula desde la caché de Wazuh (que guarda la
   severidad de TheHive; "altas y críticas" = 3 o 4). Mientras carga, `activos = null`.
+- Cada activo trae `ultimoAtaqueEn` (su alerta de severidad 3 o 4 más reciente; null si no tiene) y la respuesta trae
+  `ataquesRecientes`: grupos activo + regla de Wazuh solo con severidad 3 o 4, orden `ultimaEn` descendente, hasta 20
+  por CADA activo (`ActivosAtacados.MAX_ATAQUES_POR_ACTIVO`; no global, para no ocultar los ataques viejos de un
+  equipo), con la descripción saneada como el diagnóstico (IPs → `<ip>`; sin IPs de origen ni usuarios). Mientras
+  carga, `null` (no `[]`); sin ataques, `[]`.
 - Diagnóstico: `GET /diagnostico/wazuh/activos`, apagado por defecto (`DASHBOARD_DIAGNOSTICO=true`), solo desde
   127.0.0.1, solo nombres y conteos (agentes, equipos Windows, grupos, ubicaciones, por `source`, agente × grupo y lo que cae en
   "otros": sus grupos, marcando los genéricos, y las 10 reglas más frecuentes).

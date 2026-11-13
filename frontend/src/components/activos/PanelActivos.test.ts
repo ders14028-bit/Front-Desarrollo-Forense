@@ -129,6 +129,102 @@ describe("PanelActivos: contenido", () => {
   });
 });
 
+describe("PanelActivos: último ataque y ataques recientes", () => {
+  const datos = generarActivos(AHORA);
+  const conTexto = (d = datos, filtro?: FiltroActivos) => texto(html({ datos: d }, filtro));
+
+  it("la tabla tiene la columna 'Último ataque' con fecha de Bogotá y 'hace N'; '—' si no tiene", () => {
+    const h = html({ datos });
+    expect(h).toContain('<th scope="col">Último ataque</th>');
+    // servidor web: su ataque más reciente fue hace 25 min = 15:17 en Bogotá
+    expect(h).toContain('<span class="activos-ultimo__fecha">3 nov, 15:17</span><span class="activos-tecnico">hace 25 min</span>');
+    // el servidor de monitoreo no tiene ataques altos o críticos
+    expect(h).toContain('<span aria-hidden="true">—</span><span class="solo-lectores">Sin ataques altos o críticos</span>');
+  });
+
+  it("en la tarjeta del celular hay una línea más con el último ataque", () => {
+    const t = conTexto();
+    expect(t).toContain("Último ataque: 3 nov, 15:17 (hace 25 min)");
+    expect(t).toContain("Último ataque: — Sin ataques altos o críticos");
+  });
+
+  it("'hace N' sale de la hora del resumen, no del reloj del navegador", () => {
+    // el reloj real está años después del resumen simulado y aun así dice "hace 25 min"
+    expect(conTexto()).toContain("hace 25 min");
+    const ayer = generarActivos(AHORA + 86_400_000);
+    expect(conTexto(ayer)).toContain("hace 1 día");
+  });
+
+  it("'Ataques recientes' va debajo de la tabla y antes de 'Componentes atacados'", () => {
+    const h = html({ datos });
+    const tabla = h.indexOf("Activos más atacados");
+    const ataques = h.indexOf("Ataques recientes");
+    const componentes = h.indexOf("Componentes atacados");
+    expect(tabla).toBeGreaterThan(-1);
+    expect(ataques).toBeGreaterThan(tabla);
+    expect(componentes).toBeGreaterThan(ataques);
+  });
+
+  it("cada ataque trae fecha, activo, componente, severidad con texto, descripción y veces", () => {
+    const t = conTexto();
+    expect(t).toContain("3 nov, 15:17 hace 25 min Servidor web · Acceso remoto (SSH) Alta sshd: ataque de fuerza bruta para entrar al sistema (usuario que no existe) 6 veces desde 3 nov, 09:17");
+    expect(t).toContain("Crítica"); // texto además del color
+    expect(t).toContain("Archivo ejecutable creado en una carpeta que el malware suele usar"); // traducida por texto
+    expect(t).toContain("MariaDB: multiple authentication failures."); // sin traducción: la original
+  });
+
+  it("muestra 10 y un botón 'Ver más' accesible con aria-expanded", () => {
+    const h = html({ datos });
+    expect(h.match(/class="ataque /g)).toHaveLength(10);
+    expect(h).toMatch(/<button type="button" class="boton boton--secundario ataques__mas" aria-expanded="false" aria-controls="[^"]+">Ver más \(5 más\)<\/button>/);
+  });
+
+  it("con 10 o menos no hay botón 'Ver más'", () => {
+    const pocos = { ...datos, ataquesRecientes: datos.ataquesRecientes!.slice(0, 6) };
+    const h = html({ datos: pocos });
+    expect(h.match(/class="ataque /g)).toHaveLength(6);
+    expect(h).not.toContain("Ver más");
+  });
+
+  it("respeta el filtro de la sección (tipo y equipo)", () => {
+    const tipo = html({ datos }, { tipo: "windows", equipo: null });
+    expect(tipo.match(/class="ataque /g)).toHaveLength(4);
+    expect(texto(tipo)).not.toContain("Servidor web ·");
+    const equipo = html({ datos }, { tipo: null, equipo: "105" });
+    expect(equipo.match(/class="ataque /g)).toHaveLength(1);
+    expect(texto(equipo)).toContain("Estación de trabajo Linux · Vulnerabilidades y software");
+  });
+
+  it("vacío: mensaje con la ventana configurada, sin inventar ataques", () => {
+    const sin = { ...datos, ataquesRecientes: [] };
+    expect(conTexto(sin)).toContain("No hay ataques altos o críticos en los últimos 14 días");
+    expect(conTexto({ ...sin, ventanaDias: 30 })).toContain("No hay ataques altos o críticos en los últimos 30 días");
+    expect(html({ datos: sin })).not.toContain("ataques__mas");
+  });
+
+  it("filtro sin ataques pero con ataques en general: lo dice", () => {
+    // la estación solo tiene uno; con otro equipo elegido sin ataques (monitoreo), el vacío es por el filtro
+    const t = conTexto(datos, { tipo: null, equipo: "100" });
+    expect(t).toContain("No hay ataques altos o críticos en los últimos 14 días con el filtro elegido");
+  });
+
+  it("mientras carga no hay bloque de ataques (null, no lista vacía)", () => {
+    const t = conTexto(generarActivos(AHORA, { cargando: true }));
+    expect(t).not.toContain("Ataques recientes");
+    expect(t).not.toContain("No hay ataques");
+  });
+
+  it("nunca muestra IPs, ni la descripción con <ip> sin escapar", () => {
+    const conIp = {
+      ...datos,
+      ataquesRecientes: [{ ...datos.ataquesRecientes![0], reglaId: "9999", descripcion: "Login from <ip> failed" }],
+    };
+    const h = html({ datos: conIp });
+    expect(h).toContain("Login from &lt;ip&gt; failed");
+    expect(h).not.toMatch(/\b\d{1,3}(\.\d{1,3}){3}\b/);
+  });
+});
+
 describe("obtenerActivos", () => {
   it("el mock devuelve la misma forma; los componentes suman las alertas", async () => {
     const r = await crearFuenteMock({ ahora: () => AHORA, demoraMs: 0, falla: false }).obtenerActivos();

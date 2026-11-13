@@ -35,6 +35,11 @@ export function formatoFechaHora(ms: number): string {
   return `${diaCorto(dia)} ${dia.slice(0, 4)}, ${formatoHora(ms)}`;
 }
 
+/** "13 nov, 16:20": día y hora cortos en Bogotá. */
+export function fechaHoraCorta(ms: number): string {
+  return `${diaCorto(diaBogota(ms))}, ${formatoHora(ms)}`;
+}
+
 /** Los `n` días (`YYYY-MM-DD`, del más antiguo al más reciente) que terminan hoy en Bogotá. `ahora` (ms) es el instante de referencia. */
 export function ultimosDias(n: number, ahora: number): string[] {
   const [a, m, d] = diaBogota(ahora).split("-").map(Number);
@@ -97,7 +102,7 @@ export function frescuraAlertas(ultimaAlertaEn: number | null | undefined, ahora
   if (ultimaAlertaEn === null || ultimaAlertaEn === undefined) {
     return { texto: "Aún no se ha recibido ninguna alerta", atrasada: false };
   }
-  const fecha = `${diaCorto(diaBogota(ultimaAlertaEn))}, ${formatoHora(ultimaAlertaEn)}`;
+  const fecha = fechaHoraCorta(ultimaAlertaEn);
   return {
     texto: `Última alerta recibida: ${fecha} (${textoHace(ahora - ultimaAlertaEn)})`,
     atrasada: ahora - ultimaAlertaEn > FRESCURA_AVISO_MS,

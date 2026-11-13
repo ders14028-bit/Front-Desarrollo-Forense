@@ -1,6 +1,8 @@
 import { COMPONENTE_OTROS, NOMBRES_COMPONENTES, NOMBRES_TIPOS, ORDEN_TIPOS } from "../config/activos";
-import type { Activo } from "../types/activos";
+import type { Activo, AtaqueReciente } from "../types/activos";
+import { fechaHoraCorta, textoHace } from "./fechas";
 import { formatoEntero } from "./numeros";
+import { describirRegla } from "./wazuh";
 
 /**
  * Reglas puras de la sección "Activos atacados": filtrado, agregados por tipo y por componente y la frase resumen.
@@ -151,3 +153,58 @@ export function ordenarPorAlertas(activos: Activo[]): Activo[] {
     (x, y) => y.alertas - x.alertas || y.altasYCriticas - x.altasYCriticas || x.nombreVisible.localeCompare(y.nombreVisible, "es-CO"),
   );
 }
+
+// ---------- Último ataque y ataques recientes ----------
+
+/** Cuántos ataques recientes se muestran antes de pulsar "Ver más". */
+export const ATAQUES_VISIBLES = 10;
+
+/** Los que se muestran con "Ver más". El backend manda hasta 20 grupos por activo, así que sin filtro puede haber más. */
+export const ATAQUES_MAXIMOS = 20;
+
+export interface UltimoAtaque {
+  /** "13 nov, 16:20" (Bogotá). */
+  fecha: string;
+  /** "hace 2 h", contado desde la hora del resumen. */
+  hace: string;
+}
+
+/**
+ * Cuándo fue el último ataque alto o crítico de un activo; null si no tiene. `ahora` es la hora del resumen
+ * (`generadoEn`), no el reloj del navegador.
+ */
+export function ultimoAtaqueDe(activo: Activo, ahora: number): UltimoAtaque | null {
+  if (activo.ultimoAtaqueEn === null || activo.ultimoAtaqueEn === undefined) return null;
+  return { fecha: fechaHoraCorta(activo.ultimoAtaqueEn), hace: textoHace(ahora - activo.ultimoAtaqueEn) };
+}
+
+/** Misma clave que `claveActivo`, para decir a qué activo pertenece un ataque. */
+export const claveAtaque = (a: AtaqueReciente): string => a.agenteId ?? a.equipo ?? a.nombreVisible;
+
+/** Los ataques de los activos que pasan el filtro de la sección (tipo y equipo). Conserva el orden del backend. */
+export function filtrarAtaques(ataques: AtaqueReciente[], filtro: FiltroActivos): AtaqueReciente[] {
+  return ataques.filter(
+    (a) => (filtro.tipo === null || a.tipo === filtro.tipo) && (filtro.equipo === null || claveAtaque(a) === filtro.equipo),
+  );
+}
+
+/**
+ * Los más recientes de los ya filtrados: `ATAQUES_VISIBLES`, o `ATAQUES_MAXIMOS` si `verTodos`. Se filtra PRIMERO y se
+ * corta DESPUÉS, para que un equipo con ataques viejos no quede sin ellos por culpa de otros más ruidosos.
+ */
+export const ataquesVisibles = (ataques: AtaqueReciente[], verTodos: boolean): AtaqueReciente[] =>
+  ataques.slice(0, verTodos ? ATAQUES_MAXIMOS : ATAQUES_VISIBLES);
+
+/** Severidad en texto: 4 es Crítica; 3 (y cualquier otra) Alta. El color nunca va solo. */
+export const textoSeveridadAtaque = (severidad: number): "Crítica" | "Alta" => (severidad >= 4 ? "Crítica" : "Alta");
+
+/** Descripción para mostrar: la traducción del diccionario si existe; si no, la original que manda Wazuh. */
+export const descripcionDeAtaque = (a: AtaqueReciente): string => describirRegla(a.reglaId ?? "", a.descripcion).texto;
+
+/** "14 veces desde 13 nov, 09:10"; con una sola alerta, "1 vez" (la fecha ya está arriba). */
+export function textoVeces(a: AtaqueReciente): string {
+  return a.cantidad === 1 ? "1 vez" : `${formatoEntero(a.cantidad)} veces desde ${fechaHoraCorta(a.primeraEn)}`;
+}
+
+/** "hace 2 h" para un ataque, contado desde la hora del resumen. */
+export const haceDeAtaque = (a: AtaqueReciente, ahora: number): string => textoHace(ahora - a.ultimaEn);

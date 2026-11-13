@@ -1,24 +1,34 @@
 import { useId, useState } from "react";
 import { COMPONENTE_OTROS } from "../../config/activos";
 import { useActivos, type ResultadoActivos } from "../../hooks/useActivos";
-import type { Activo, ActivosAtacados } from "../../types/activos";
+import type { Activo, ActivosAtacados, AtaqueReciente } from "../../types/activos";
 import {
+  ATAQUES_MAXIMOS,
+  ATAQUES_VISIBLES,
   SIN_FILTRO,
   alternarTipo,
+  ataquesVisibles,
   claveActivo,
+  claveAtaque,
   componentesAgregados,
+  descripcionDeAtaque,
   elegirEquipo,
   filtrarActivos,
+  filtrarAtaques,
   fraseResumen,
+  haceDeAtaque,
   hayFiltro,
   nombreComponente,
   nombreTipo,
   opcionesEquipo,
   ordenarPorAlertas,
   resumenPorTipo,
+  textoSeveridadAtaque,
+  textoVeces,
+  ultimoAtaqueDe,
   type FiltroActivos,
 } from "../../utils/activos";
-import { formatoHora, textoUltimosDias, tituloConVentana } from "../../utils/fechas";
+import { fechaHoraCorta, formatoHora, textoUltimosDias, tituloConVentana } from "../../utils/fechas";
 import { anchoRelativo, maximoDe } from "../../utils/graficas";
 import { formatoEntero } from "../../utils/numeros";
 import { TarjetaGrafica } from "../graficas/TarjetaGrafica";
@@ -126,7 +136,15 @@ function Contenido({ datos, activos, filtroInicial }: { datos: ActivosAtacados; 
             {fraseResumen(filtrados) ?? `Ninguno de estos activos tiene alertas en los ${textoUltimosDias(datos.ventanaDias)}.`}
           </p>
           <TarjetasTipo activos={activos} filtro={filtro} alElegir={(tipo) => setFiltro(alternarTipo(filtro, tipo, activos))} />
-          <TablaActivos activos={filtrados} filtro={filtro} alElegir={elegirFila} />
+          <TablaActivos activos={filtrados} filtro={filtro} alElegir={elegirFila} ahora={datos.generadoEn} />
+          {datos.ataquesRecientes !== null && datos.ataquesRecientes !== undefined && (
+            <AtaquesRecientes
+              ataques={filtrarAtaques(datos.ataquesRecientes, filtro)}
+              ventanaDias={datos.ventanaDias}
+              hayFiltro={hayFiltro(filtro) && datos.ataquesRecientes.length > 0}
+              ahora={datos.generadoEn}
+            />
+          )}
           <Componentes activos={filtrados} />
           {datos.alertasSinActivo ? (
             <p className="grafica__nota">
@@ -166,7 +184,18 @@ function TarjetasTipo({ activos, filtro, alElegir }: { activos: Activo[]; filtro
 
 // ---------- Tabla "Activos más atacados" (tarjetas en pantallas angostas) ----------
 
-function TablaActivos({ activos, filtro, alElegir }: { activos: Activo[]; filtro: FiltroActivos; alElegir: (a: Activo) => void }) {
+function TablaActivos({
+  activos,
+  filtro,
+  alElegir,
+  ahora,
+}: {
+  activos: Activo[];
+  filtro: FiltroActivos;
+  alElegir: (a: Activo) => void;
+  /** Hora del resumen: el "hace N" se cuenta desde aquí, no desde el reloj del navegador. */
+  ahora: number;
+}) {
   const idTitulo = useId();
   const elegido = (a: Activo) => filtro.equipo === claveActivo(a);
   const principal = (a: Activo) => (a.componentePrincipal === null ? "—" : nombreComponente(a.componentePrincipal));
@@ -192,6 +221,7 @@ function TablaActivos({ activos, filtro, alElegir }: { activos: Activo[]; filtro
                 Altas y críticas
               </th>
               <th scope="col">Componente principal</th>
+              <th scope="col">Último ataque</th>
             </tr>
           </thead>
           <tbody>
@@ -216,6 +246,9 @@ function TablaActivos({ activos, filtro, alElegir }: { activos: Activo[]; filtro
                 <td className="num">{formatoEntero(a.alertas)}</td>
                 <td className="num">{formatoEntero(a.altasYCriticas)}</td>
                 <td>{principal(a)}</td>
+                <td>
+                  <UltimoAtaque activo={a} ahora={ahora} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -235,10 +268,101 @@ function TablaActivos({ activos, filtro, alElegir }: { activos: Activo[]; filtro
                 <strong>{plural(a.alertas, "alerta", "alertas")}</strong> · {formatoEntero(a.altasYCriticas)} altas y críticas
               </span>
               <span className="activos-tarjeta__dato">Componente principal: {principal(a)}</span>
+              <span className="activos-tarjeta__dato">
+                Último ataque: <UltimoAtaque activo={a} ahora={ahora} enLinea />
+              </span>
             </button>
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** "13 nov, 16:20" y debajo "hace 2 h" (en línea, en la tarjeta); "—" si el activo no tiene ataques altos o críticos. */
+function UltimoAtaque({ activo, ahora, enLinea = false }: { activo: Activo; ahora: number; enLinea?: boolean }) {
+  const ultimo = ultimoAtaqueDe(activo, ahora);
+  if (ultimo === null) {
+    return (
+      <>
+        <span aria-hidden="true">—</span>
+        <span className="solo-lectores">Sin ataques altos o críticos</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <span className="activos-ultimo__fecha">{ultimo.fecha}</span>
+      {enLinea ? <> ({ultimo.hace})</> : <span className="activos-tecnico">{ultimo.hace}</span>}
+    </>
+  );
+}
+
+// ---------- Bloque "Ataques recientes" ----------
+
+/**
+ * Altas y críticas agrupadas por activo y regla, de la más reciente a la más antigua. Muestra 10 y, si hay más, un botón
+ * "Ver más" para llegar a los 20 que manda el backend. Ya viene filtrado por tipo y equipo.
+ */
+function AtaquesRecientes({
+  ataques,
+  ventanaDias,
+  hayFiltro: conFiltro,
+  ahora,
+}: {
+  ataques: AtaqueReciente[];
+  ventanaDias: number;
+  /** true = el vacío se debe al filtro de la sección (había ataques sin filtrar). */
+  hayFiltro: boolean;
+  ahora: number;
+}) {
+  const [verTodos, setVerTodos] = useState(false);
+  const idTitulo = useId();
+  const idLista = useId();
+  const visibles = ataquesVisibles(ataques, verTodos);
+  const ocultos = Math.min(ataques.length, ATAQUES_MAXIMOS) - ATAQUES_VISIBLES;
+
+  return (
+    <section className="ataques" aria-labelledby={idTitulo}>
+      <h3 id={idTitulo} className="grafica__titulo">
+        Ataques recientes
+      </h3>
+      {ataques.length === 0 ? (
+        <EstadoVacio
+          texto={`No hay ataques altos o críticos en los ${textoUltimosDias(ventanaDias)}${conFiltro ? " con el filtro elegido" : ""}`}
+        />
+      ) : (
+        <>
+          <p className="grafica__nota">Alertas altas y críticas agrupadas por activo y regla de Wazuh, de la más reciente a la más antigua.</p>
+          <ul id={idLista} className="ataques__lista">
+            {visibles.map((a) => (
+              <li key={`${claveAtaque(a)}|${a.reglaId ?? ""}`} className={`ataque sev-${a.severidad >= 4 ? 4 : 3}`}>
+                <p className="ataque__cuando">
+                  <strong>{fechaHoraCorta(a.ultimaEn)}</strong> <span className="ataque__hace">{haceDeAtaque(a, ahora)}</span>
+                </p>
+                <p className="ataque__donde">
+                  {a.nombreVisible} · {nombreComponente(a.componente)}
+                </p>
+                <p className="ataque__regla">
+                  <span className="ataque__severidad">{textoSeveridadAtaque(a.severidad)}</span> {descripcionDeAtaque(a)}
+                </p>
+                <p className="ataque__veces">{textoVeces(a)}</p>
+              </li>
+            ))}
+          </ul>
+          {ocultos > 0 && (
+            <button
+              type="button"
+              className="boton boton--secundario ataques__mas"
+              aria-expanded={verTodos}
+              aria-controls={idLista}
+              onClick={() => setVerTodos(!verTodos)}
+            >
+              {verTodos ? "Ver menos" : `Ver más (${formatoEntero(ocultos)} más)`}
+            </button>
+          )}
+        </>
+      )}
     </section>
   );
 }

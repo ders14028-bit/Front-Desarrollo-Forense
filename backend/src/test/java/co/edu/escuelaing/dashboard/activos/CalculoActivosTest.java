@@ -3,11 +3,13 @@ package co.edu.escuelaing.dashboard.activos;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import co.edu.escuelaing.dashboard.activos.ActivosAtacados.Activo;
+import co.edu.escuelaing.dashboard.activos.ActivosAtacados.AtaqueReciente;
 import co.edu.escuelaing.dashboard.activos.ActivosAtacados.ConteoComponente;
 import co.edu.escuelaing.dashboard.activos.ConfiguracionActivos.Componente;
 import co.edu.escuelaing.dashboard.activos.ConfiguracionActivos.Entrada;
 import co.edu.escuelaing.dashboard.dominio.FixturesTheHive;
 import co.edu.escuelaing.dashboard.wazuh.AlertaWazuh;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -156,5 +158,130 @@ public class CalculoActivosTest {
         assertThat(vacio.alertas()).isZero();
         assertThat(vacio.componentePrincipal()).isNull();
         assertThat(vacio.componentes()).isEmpty();
+    }
+
+    // ---- ataques recientes y último ataque ----
+
+    private static AlertaWazuh ataque(String id, String agenteId, String agente, int severidad, long creadaEn, String reglaId,
+                                      String descripcion, String... grupos) {
+        return new AlertaWazuh(id, creadaEn, true, reglaId, 10, descripcion, List.of(), List.of(), Map.of(), "192.0.2.9", "usuario-09",
+                agente, new AlertaWazuh.Activo("wazuh", agenteId, null, "journald", List.of(grupos), severidad));
+    }
+
+    @Test
+    void agrupaPorActivoYReglaConCantidadPrimeraUltimaYSeveridadMaxima() {
+        var c = config(new Entrada("004", "web", "web", "Servidor web", "Linux"));
+        var r = CalculoActivos.calcular(List.of(
+                ataque("1", "004", "web", 3, 1000, "5712", "sshd: brute force", "sshd"),
+                ataque("2", "004", "web", 4, 3000, "5712", "sshd: brute force", "sshd"),
+                ataque("3", "004", "web", 3, 2000, "5712", "sshd: brute force", "sshd"),
+                ataque("4", "004", "web", 3, 2500, "31151", "Web attack", "web_server_lab")), c);
+
+        assertThat(r.ataquesRecientes()).hasSize(2);
+        AtaqueReciente ssh = r.ataquesRecientes().get(0);
+        assertThat(ssh).extracting(AtaqueReciente::agenteId, AtaqueReciente::equipo, AtaqueReciente::nombreVisible, AtaqueReciente::tipo,
+                AtaqueReciente::componente, AtaqueReciente::reglaId, AtaqueReciente::nivelWazuh, AtaqueReciente::descripcion,
+                AtaqueReciente::severidad, AtaqueReciente::cantidad, AtaqueReciente::primeraEn, AtaqueReciente::ultimaEn)
+                .containsExactly("004", "web", "Servidor web", "web", "ssh", "5712", 10, "sshd: brute force", 4, 3, 1000L, 3000L);
+        AtaqueReciente web = r.ataquesRecientes().get(1);
+        assertThat(web).extracting(AtaqueReciente::reglaId, AtaqueReciente::componente, AtaqueReciente::cantidad, AtaqueReciente::severidad)
+                .containsExactly("31151", "servidor-web", 1, 3);
+    }
+
+    @Test
+    void laMismaReglaEnDosActivosSonDosGrupos() {
+        var r = CalculoActivos.calcular(List.of(
+                ataque("1", "010", "uno", 3, 1000, "5712", "x", "sshd"),
+                ataque("2", "011", "dos", 3, 2000, "5712", "x", "sshd")), config());
+
+        assertThat(r.ataquesRecientes()).extracting(AtaqueReciente::equipo).containsExactly("dos", "uno");
+    }
+
+    @Test
+    void ordenaPorUltimaEnDeLaMasRecienteALaMasAntigua() {
+        var r = CalculoActivos.calcular(List.of(
+                ataque("1", "010", "a", 3, 1000, "r1", "x"),
+                ataque("2", "010", "a", 3, 9000, "r2", "x"),
+                ataque("3", "010", "a", 4, 5000, "r3", "x"),
+                ataque("4", "010", "a", 3, 6000, "r1", "x")), config());
+
+        assertThat(r.ataquesRecientes()).extracting(AtaqueReciente::reglaId).containsExactly("r2", "r1", "r3");
+        assertThat(r.ataquesRecientes()).extracting(AtaqueReciente::ultimaEn).containsExactly(9000L, 6000L, 5000L);
+    }
+
+    @Test
+    void soloCuentanLasSeveridades3y4() {
+        var r = CalculoActivos.calcular(List.of(
+                ataque("1", "010", "a", 1, 9000, "baja", "x"),
+                ataque("2", "010", "a", 2, 8000, "media", "x"),
+                ataque("3", "010", "a", 3, 1000, "alta", "x")), config());
+
+        assertThat(r.ataquesRecientes()).extracting(AtaqueReciente::reglaId).containsExactly("alta");
+        assertThat(r.ataquesRecientes().get(0).cantidad()).isEqualTo(1);
+        // las de severidad baja y media siguen contando como alertas del activo
+        assertThat(activo(r, "a").alertas()).isEqualTo(3);
+        assertThat(activo(r, "a").altasYCriticas()).isEqualTo(1);
+    }
+
+    @Test
+    void conAlertasSoloBajasONadaNoHayAtaquesPeroLaListaNoEsNull() {
+        assertThat(CalculoActivos.calcular(List.of(ataque("1", "010", "a", 2, 1000, "r", "x")), config()).ataquesRecientes()).isEmpty();
+        assertThat(CalculoActivos.calcular(List.of(), config()).ataquesRecientes()).isEmpty();
+    }
+
+    @Test
+    void tieneUnTopeDe20GruposPorActivo() {
+        List<AlertaWazuh> alertas = new ArrayList<>();
+        for (int i = 1; i <= 25; i++) {
+            alertas.add(ataque("a" + i, "010", "a", 3, i * 1000L, "regla-" + i, "x"));
+        }
+        var r = CalculoActivos.calcular(alertas, config());
+
+        assertThat(ActivosAtacados.MAX_ATAQUES_POR_ACTIVO).isEqualTo(20);
+        assertThat(r.ataquesRecientes()).hasSize(20);
+        assertThat(r.ataquesRecientes().get(0).reglaId()).isEqualTo("regla-25");
+        assertThat(r.ataquesRecientes().get(19).reglaId()).isEqualTo("regla-6");   // las 5 más viejas de ESE activo quedan fuera
+    }
+
+    @Test
+    void elTopeEsPorActivoUnActivoConAtaquesViejosApareceAunqueOtrosTenganMuchosMasRecientes() {
+        List<AlertaWazuh> alertas = new ArrayList<>();
+        for (int i = 1; i <= 30; i++) {   // el activo "ruidoso": 30 reglas, todas más recientes que las del otro
+            alertas.add(ataque("r" + i, "010", "ruidoso", 4, 1_000_000L + i * 1000L, "regla-" + i, "x"));
+        }
+        alertas.add(ataque("v1", "011", "tranquilo", 3, 1000L, "vieja-1", "x"));
+        alertas.add(ataque("v2", "011", "tranquilo", 3, 2000L, "vieja-2", "x"));
+        var r = CalculoActivos.calcular(alertas, config());
+
+        assertThat(r.ataquesRecientes()).hasSize(22);   // 20 del ruidoso + 2 del tranquilo
+        assertThat(r.ataquesRecientes().stream().filter(a -> "ruidoso".equals(a.equipo())).count()).isEqualTo(20);
+        assertThat(r.ataquesRecientes().stream().filter(a -> "tranquilo".equals(a.equipo()))).extracting(AtaqueReciente::reglaId)
+                .containsExactly("vieja-2", "vieja-1");
+        // el orden global sigue siendo por ultimaEn descendente
+        assertThat(r.ataquesRecientes()).extracting(AtaqueReciente::ultimaEn).isSortedAccordingTo(java.util.Comparator.reverseOrder());
+    }
+
+    @Test
+    void laDescripcionSaneaLasIpsYNoSaleNingunUsuario() {
+        var r = CalculoActivos.calcular(List.of(
+                ataque("1", "010", "a", 3, 1000, "5712", "Login from 203.0.113.7 and fe80::1:2 failed", "sshd"),
+                ataque("2", "010", "a", 3, 2000, "999", "  ", "sshd")), config());
+
+        assertThat(r.ataquesRecientes().get(1).descripcion()).isEqualTo("Login from <ip> and <ip> failed");
+        assertThat(r.ataquesRecientes().get(0).descripcion()).isNull();   // en blanco: no se inventa
+        assertThat(r.ataquesRecientes().toString()).doesNotContain("203.0.113.7").doesNotContain("192.0.2.9").doesNotContain("usuario-09");
+    }
+
+    @Test
+    void ultimoAtaqueEnEsLaAlertaAltaOCriticaMasRecienteONull() {
+        var c = config(new Entrada("004", "web", "web", "Servidor web", "Linux"), new Entrada("001", "cliente", "estacion", "Estación", "Linux"));
+        var r = CalculoActivos.calcular(List.of(
+                ataque("1", "004", "web", 3, 1000, "r1", "x"),
+                ataque("2", "004", "web", 4, 4000, "r2", "x"),
+                ataque("3", "004", "web", 1, 9000, "r3", "x"),    // más reciente pero baja: no cuenta
+                ataque("4", "001", "cliente", 2, 5000, "r4", "x")), c);
+
+        assertThat(activo(r, "web").ultimoAtaqueEn()).isEqualTo(4000L);
+        assertThat(activo(r, "cliente").ultimoAtaqueEn()).isNull();
     }
 }

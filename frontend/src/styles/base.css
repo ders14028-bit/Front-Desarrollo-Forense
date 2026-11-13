@@ -1998,6 +1998,71 @@ main:focus-visible {
   }
 }
 
+/* ---------- Activos: último ataque y ataques recientes ---------- */
+.activos-ultimo__fecha {
+  display: block;
+  white-space: nowrap;
+}
+.activos-tarjeta .activos-ultimo__fecha {
+  display: inline;
+}
+.ataques {
+  margin-top: var(--espacio-4);
+}
+.ataques .grafica__nota {
+  margin: 0 0 var(--espacio-3);
+}
+.ataques__lista {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ataque {
+  display: grid;
+  gap: 2px;
+  padding: var(--espacio-3);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--sev-color, var(--borde-control));
+  border-radius: var(--radio, 8px);
+  background: var(--superficie, transparent);
+}
+.ataque p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ataque__hace,
+.ataque__donde,
+.ataque__veces {
+  font-size: 0.875rem;
+  color: var(--texto-suave);
+}
+.ataque__severidad {
+  display: inline-block;
+  margin-right: var(--espacio-1, 4px);
+  padding: 0 6px;
+  border: 1px solid var(--sev-color, var(--borde-control));
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.ataques__mas {
+  margin-top: var(--espacio-3);
+}
+@media (min-width: 720px) {
+  .ataque {
+    grid-template-columns: 11rem 1fr;
+    column-gap: var(--espacio-4);
+  }
+  .ataque__regla,
+  .ataque__veces {
+    grid-column: 2;
+  }
+  .ataque__cuando {
+    grid-row: 1 / span 2;
+  }
+}
 .activos-componente__pista {
   position: relative;
   height: 12px;

@@ -30,10 +30,10 @@ public class ActivosController {
         MetricasWazuh estado = sincronizacion.actual();
         if (!MetricasWazuh.LISTO.equals(estado.estado())) {
             return new ActivosAtacados(estado.generadoEn(), estado.estado(), estado.progreso(), estado.dias(), estado.desde(),
-                    estado.thehive(), null, null);
+                    estado.thehive(), null, null, null);
         }
         CalculoActivos.Resultado r = CalculoActivos.calcular(sincronizacion.instantanea(), configuracion);
         return new ActivosAtacados(estado.generadoEn(), estado.estado(), estado.progreso(), estado.dias(), estado.desde(),
-                estado.thehive(), r.activos(), r.alertasSinActivo());
+                estado.thehive(), r.activos(), r.alertasSinActivo(), r.ataquesRecientes());
     }
 }

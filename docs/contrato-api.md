@@ -315,6 +315,7 @@ interface ActivosAtacados {
   thehive: EstadoTheHive;
   activos: Activo[] | null;          // null mientras carga (nunca []); de más a menos alertas
   alertasSinActivo: number | null;   // alertas sin agente: no se asignan a ningún activo
+  ataquesRecientes: AtaqueReciente[] | null; // null mientras carga (nunca []); máx. 20 grupos POR ACTIVO, de la más reciente a la más antigua
 }
 interface Activo {
   agenteId: string | null;           // id de agente de Wazuh ("003")
@@ -326,6 +327,21 @@ interface Activo {
   altasYCriticas: number;            // severidad de TheHive 3 o 4
   componentePrincipal: string | null;// el de más alertas; null si no tiene alertas
   componentes: { clave: string; alertas: number; altasYCriticas: number }[];  // de mayor a menor; SUMAN `alertas`
+  ultimoAtaqueEn: number | null;     // ms: su alerta alta o crítica (severidad 3 o 4) más reciente; null si no tiene
+}
+interface AtaqueReciente {           // altas y críticas de UN activo y UNA regla de Wazuh
+  agenteId: string | null;
+  equipo: string | null;             // nombre técnico: el frontend lo usa para filtrar por equipo (con `agenteId`)
+  nombreVisible: string;
+  tipo: string;                      // el del activo
+  componente: string;                // clave de componente de la ÚLTIMA alerta del grupo
+  reglaId: string | null;            // id de la regla de Wazuh; null si la alerta no trae bloque legible
+  nivelWazuh: number | null;         // nivel de la regla (0–15)
+  descripcion: string | null;        // descripción de la regla (en inglés), con las IPs reemplazadas por "<ip>"; null si no hay
+  severidad: number;                 // la MAYOR del grupo: 3 alta o 4 crítica
+  cantidad: number;                  // alertas del grupo
+  primeraEn: number;                 // ms de la más antigua
+  ultimaEn: number;                  // ms de la más reciente
 }
 ```
 
@@ -341,6 +357,18 @@ interface Activo {
   `cuentas-permisos`, `auditoria`, `vulnerabilidades`, `integridad`, `monitoreo-wazuh`, `otros`. El frontend las
   traduce (`config/activos.ts`).
 - Empates de componentes: en el orden de la tabla. Empates de activos: más altas y críticas, luego por nombre visible.
+- **`ultimoAtaqueEn`:** la `_createdAt` de la alerta de severidad 3 o 4 más reciente del activo; las de severidad 1 y 2 no
+  cuentan. `null` si el activo no tiene ninguna (el frontend muestra "—").
+- **`ataquesRecientes`:** solo alertas de severidad 3 o 4, agrupadas por activo (el mismo que en `activos`) + `reglaId`.
+  Orden: `ultimaEn` descendente (a igual fecha, más `cantidad`). Hasta 20 grupos POR CADA activo (`ActivosAtacados.MAX_ATAQUES_POR_ACTIVO`), los más
+  recientes de cada uno: con 6 activos son como mucho 120. El tope no es global a propósito: así un equipo con ataques
+  viejos sigue saliendo al filtrarlo aunque otros tengan muchos más recientes. Con menos alertas altas, menos grupos, y
+  `[]` si no hay ninguna (solo es `null` mientras carga). `nivelWazuh`,
+  `descripcion` y `componente` son los de la última alerta del grupo. La `descripcion` pasa por el mismo saneamiento del
+  diagnóstico (`DiagnosticoActivos.sinIps`: IPv4 e IPv6 → `<ip>`); no se manda ninguna IP de origen ni usuario.
+- **Frontend:** el filtro de la sección (tipo y equipo) se aplica PRIMERO y después se muestran los 10 más recientes, con
+  "Ver más" hasta 20. "hace N" se calcula contra `generadoEn`, no contra el reloj del navegador. La descripción se muestra
+  traducida si la regla está en el diccionario del frontend (`config/wazuh.ts`); si no, la original.
 
 ---
 

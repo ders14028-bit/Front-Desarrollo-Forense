@@ -66,7 +66,8 @@ class ActivosControllerTest {
                 .andExpect(jsonPath("$.progreso").value(41))
                 .andExpect(jsonPath("$.ventanaDias").value(7))
                 .andExpect(content().string(Matchers.containsString("\"activos\":null")))
-                .andExpect(content().string(Matchers.containsString("\"alertasSinActivo\":null")));
+                .andExpect(content().string(Matchers.containsString("\"alertasSinActivo\":null")))
+                .andExpect(content().string(Matchers.containsString("\"ataquesRecientes\":null")));
     }
 
     @Test
@@ -88,6 +89,15 @@ class ActivosControllerTest {
                 .andExpect(jsonPath("$.activos[0].altasYCriticas").value(1))
                 .andExpect(jsonPath("$.activos[0].componentePrincipal").value("base-de-datos"))
                 .andExpect(jsonPath("$.activos[0].componentes[0].clave").value("base-de-datos"))
+                .andExpect(jsonPath("$.activos[0].ultimoAtaqueEn").value(T))
+                .andExpect(jsonPath("$.activos[1].ultimoAtaqueEn").doesNotExist())
+                .andExpect(jsonPath("$.ataquesRecientes.length()").value(1))
+                .andExpect(jsonPath("$.ataquesRecientes[0].nombreVisible").value("Servidor de base de datos"))
+                .andExpect(jsonPath("$.ataquesRecientes[0].reglaId").value("1"))
+                .andExpect(jsonPath("$.ataquesRecientes[0].descripcion").value("x"))
+                .andExpect(jsonPath("$.ataquesRecientes[0].severidad").value(4))
+                .andExpect(jsonPath("$.ataquesRecientes[0].cantidad").value(1))
+                .andExpect(jsonPath("$.ataquesRecientes[0].ultimaEn").value(T))
                 .andExpect(content().string(Matchers.not(Matchers.containsString("192.0.2.77"))))
                 .andExpect(content().string(Matchers.not(Matchers.containsString("usuario-77"))));
     }

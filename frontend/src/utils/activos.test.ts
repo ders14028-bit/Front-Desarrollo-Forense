@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { Activo } from "../types/activos";
+import type { Activo, AtaqueReciente } from "../types/activos";
 import {
+  ATAQUES_MAXIMOS,
+  ATAQUES_VISIBLES,
   SIN_FILTRO,
   alternarTipo,
+  ataquesVisibles,
   claveActivo,
+  claveAtaque,
+  descripcionDeAtaque,
+  filtrarAtaques,
+  haceDeAtaque,
+  textoSeveridadAtaque,
+  textoVeces,
+  ultimoAtaqueDe,
   componentesAgregados,
   elegirEquipo,
   filtrarActivos,
@@ -28,6 +38,7 @@ function activo(id: string, nombreVisible: string, tipo: string, componentes: Ar
     altasYCriticas: lista.reduce((s, c) => s + c.altasYCriticas, 0),
     componentePrincipal: lista[0]?.clave ?? null,
     componentes: lista,
+    ultimoAtaqueEn: null,
   };
 }
 
@@ -145,5 +156,139 @@ describe("fraseResumen", () => {
   it("sin alertas devuelve null (nunca inventa un activo)", () => {
     expect(fraseResumen([])).toBeNull();
     expect(fraseResumen([VACIO])).toBeNull();
+  });
+});
+
+// ---------- Último ataque y ataques recientes ----------
+
+// 3 nov 2026, 20:42 UTC = 15:42 en Bogotá
+const AHORA = Date.UTC(2026, 10, 3, 20, 42);
+const HORA = 3_600_000;
+
+function ataque(sobre: Partial<AtaqueReciente> = {}): AtaqueReciente {
+  return {
+    agenteId: "4",
+    equipo: "tec-4",
+    nombreVisible: "Servidor web",
+    tipo: "web",
+    componente: "ssh",
+    reglaId: "999",
+    nivelWazuh: 10,
+    descripcion: "Some rule",
+    severidad: 3,
+    cantidad: 5,
+    primeraEn: AHORA - 5 * HORA,
+    ultimaEn: AHORA - 2 * HORA,
+    ...sobre,
+  };
+}
+
+describe("ultimoAtaqueDe", () => {
+  it("fecha y hora de Bogotá y 'hace N' contado desde la hora del resumen", () => {
+    const a = { ...WEB, ultimoAtaqueEn: AHORA - 2 * HORA };
+    expect(ultimoAtaqueDe(a, AHORA)).toEqual({ fecha: "3 nov, 13:42", hace: "hace 2 h" });
+    // otro reloj, otro "hace": depende solo de `ahora`
+    expect(ultimoAtaqueDe(a, AHORA + 24 * HORA)?.hace).toBe("hace 1 día");
+    expect(ultimoAtaqueDe({ ...WEB, ultimoAtaqueEn: AHORA - 90_000 }, AHORA)?.hace).toBe("hace 1 min");
+  });
+
+  it("la medianoche de Bogotá no se corre por la zona del equipo", () => {
+    const a = { ...WEB, ultimoAtaqueEn: Date.UTC(2026, 10, 4, 4, 59) }; // 3 nov, 23:59 en Bogotá
+    expect(ultimoAtaqueDe(a, AHORA + 10 * HORA)?.fecha).toBe("3 nov, 23:59");
+  });
+
+  it("sin ataques altos o críticos: null (la tabla muestra '—')", () => {
+    expect(ultimoAtaqueDe(WEB, AHORA)).toBeNull();
+    expect(ultimoAtaqueDe({ ...WEB, ultimoAtaqueEn: undefined as unknown as null }, AHORA)).toBeNull();
+  });
+});
+
+describe("filtrarAtaques", () => {
+  const A = ataque({ agenteId: "4", tipo: "web" });
+  const B = ataque({ agenteId: "3", equipo: "tec-3", nombreVisible: "BD", tipo: "base-de-datos" });
+  const C = ataque({ agenteId: "2", equipo: "tec-2", nombreVisible: "Windows 1", tipo: "windows" });
+  const D = ataque({ agenteId: null, equipo: null, nombreVisible: "agente-raro", tipo: "sin-clasificar" });
+  const TODOS_ATAQUES = [A, B, C, D];
+
+  it("sin filtro devuelve todos, en el mismo orden", () => {
+    expect(filtrarAtaques(TODOS_ATAQUES, SIN_FILTRO)).toEqual(TODOS_ATAQUES);
+  });
+
+  it("por tipo, por equipo y por los dos; la clave es la misma que la del activo", () => {
+    expect(filtrarAtaques(TODOS_ATAQUES, { tipo: "windows", equipo: null })).toEqual([C]);
+    expect(filtrarAtaques(TODOS_ATAQUES, { tipo: null, equipo: claveActivo(DB) })).toEqual([B]);
+    expect(filtrarAtaques(TODOS_ATAQUES, { tipo: "web", equipo: "3" })).toEqual([]);
+    expect(claveAtaque(D)).toBe("agente-raro");
+    expect(filtrarAtaques(TODOS_ATAQUES, { tipo: null, equipo: "agente-raro" })).toEqual([D]);
+  });
+
+  it("un filtro que no coincide con nada da lista vacía", () => {
+    expect(filtrarAtaques(TODOS_ATAQUES, { tipo: null, equipo: "no-existe" })).toEqual([]);
+    expect(filtrarAtaques([], SIN_FILTRO)).toEqual([]);
+  });
+});
+
+describe("ataquesVisibles", () => {
+  const veinte = Array.from({ length: 20 }, (_, i) => ataque({ reglaId: `r${i}` }));
+
+  it("muestra 10 y con 'Ver más' los 20", () => {
+    expect(ATAQUES_VISIBLES).toBe(10);
+    expect(ataquesVisibles(veinte, false)).toHaveLength(10);
+    expect(ataquesVisibles(veinte, false)[9].reglaId).toBe("r9");
+    expect(ataquesVisibles(veinte, true)).toHaveLength(20);
+  });
+
+  it("sin filtro puede haber más de 20 (hasta 20 por activo): se muestran 10 y, con 'Ver más', 20", () => {
+    const muchos = Array.from({ length: 120 }, (_, i) => ataque({ reglaId: `r${i}` }));
+    expect(ATAQUES_MAXIMOS).toBe(20);
+    expect(ataquesVisibles(muchos, false)).toHaveLength(10);
+    expect(ataquesVisibles(muchos, true)).toHaveLength(20);
+  });
+
+  it("se filtra primero y se corta después: un equipo con ataques viejos aparece aunque otros tengan muchos más recientes", () => {
+    const ruidosos = Array.from({ length: 40 }, (_, i) =>
+      ataque({ agenteId: "4", reglaId: `nueva-${i}`, ultimaEn: AHORA - i * 60_000 }),
+    );
+    const viejo = ataque({ agenteId: "3", equipo: "tec-3", nombreVisible: "BD", tipo: "base-de-datos", reglaId: "vieja", ultimaEn: AHORA - 9 * 24 * HORA });
+    const todos = [...ruidosos, viejo]; // el orden del backend: la más reciente primero
+    // sin filtro el viejo queda fuera de los 20 que se muestran...
+    expect(ataquesVisibles(filtrarAtaques(todos, SIN_FILTRO), true).map((a) => a.reglaId)).not.toContain("vieja");
+    // ...pero al filtrar por su equipo o su tipo aparece
+    expect(ataquesVisibles(filtrarAtaques(todos, { tipo: null, equipo: "3" }), false).map((a) => a.reglaId)).toEqual(["vieja"]);
+    expect(ataquesVisibles(filtrarAtaques(todos, { tipo: "base-de-datos", equipo: null }), false).map((a) => a.reglaId)).toEqual(["vieja"]);
+  });
+
+  it("con 10 o menos no hay nada que ocultar", () => {
+    expect(ataquesVisibles(veinte.slice(0, 4), false)).toHaveLength(4);
+    expect(ataquesVisibles([], true)).toEqual([]);
+  });
+});
+
+describe("textos de un ataque", () => {
+  it("severidad con texto: 4 Crítica, 3 Alta", () => {
+    expect(textoSeveridadAtaque(4)).toBe("Crítica");
+    expect(textoSeveridadAtaque(3)).toBe("Alta");
+  });
+
+  it("descripción: la traducción si existe (por id o por texto); si no, la original; nunca inventa", () => {
+    expect(descripcionDeAtaque(ataque({ reglaId: "5712", descripcion: "sshd: brute force" }))).toBe(
+      "sshd: ataque de fuerza bruta para entrar al sistema (usuario que no existe)",
+    );
+    expect(
+      descripcionDeAtaque(ataque({ reglaId: "92213", descripcion: "Executable file dropped in folder commonly used by malware" })),
+    ).toBe("Archivo ejecutable creado en una carpeta que el malware suele usar");
+    expect(descripcionDeAtaque(ataque({ reglaId: "1", descripcion: "Untranslated rule" }))).toBe("Untranslated rule");
+    expect(descripcionDeAtaque(ataque({ reglaId: null, descripcion: null }))).toBe("Sin descripción");
+  });
+
+  it("'N veces desde <primera fecha>' en Bogotá; una sola alerta, '1 vez'", () => {
+    expect(textoVeces(ataque({ cantidad: 14, primeraEn: Date.UTC(2026, 10, 3, 14, 10) }))).toBe("14 veces desde 3 nov, 09:10");
+    expect(textoVeces(ataque({ cantidad: 1 }))).toBe("1 vez");
+    expect(textoVeces(ataque({ cantidad: 1234, primeraEn: AHORA }))).toContain("1.234 veces");
+  });
+
+  it("'hace N' del ataque se cuenta desde la hora del resumen", () => {
+    expect(haceDeAtaque(ataque({ ultimaEn: AHORA - 25 * 60_000 }), AHORA)).toBe("hace 25 min");
+    expect(haceDeAtaque(ataque({ ultimaEn: AHORA - 3 * 24 * HORA }), AHORA)).toBe("hace 3 días");
   });
 });
